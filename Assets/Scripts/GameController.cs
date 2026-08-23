@@ -1,12 +1,18 @@
 using UnityEngine;
+using TMPro;
 
 public class GameController : MonoBehaviour
 {
-    public enum Estado { Mapa, Decisao, MinigamePouso, ExplorandoPlaneta }
+    public enum Estado { Mapa, Decisao, MinigamePouso, ExplorandoPlaneta, EmOrbita }
 
     [Header("Referências de Objetos")]
     public Nave nave;
     public Camera cameraPrincipal;
+
+    [Header("UI do Aviso de Órbita")]
+    public TextMeshProUGUI textoOrbita; // O texto que vai aparecer embaixo
+    public GameObject painelTextoOrbita; // O GameObject que segura esse texto (Painel/Imagem)
+    public float raioOrbita = 5f; // Distância extra para detectar proximidade
     
     [Header("UI (Painéis)")]
     public GameObject painelDecisaoPouso; // Painel dos botões
@@ -30,6 +36,7 @@ public class GameController : MonoBehaviour
         planetaInterior.SetActive(false);
         cameraPlaneta.gameObject.SetActive(false);
         Time.timeScale = 1;
+        if (painelTextoOrbita) painelTextoOrbita.SetActive(false);
     }
 
     void Update()
@@ -47,6 +54,19 @@ public class GameController : MonoBehaviour
                     AbrirPainelDecisao();
                     break;
                 }
+            }
+        }
+
+                // NOVO: Lógica de órbita
+        if (estadoAtual == Estado.Mapa)
+        {
+            VerificarProximidadeOrbita();
+        }
+        else if (estadoAtual == Estado.EmOrbita)
+        {
+            if (Input.GetKeyDown(KeyCode.O))
+            {
+                SairDaOrbita();
             }
         }
     }
@@ -137,5 +157,55 @@ public class GameController : MonoBehaviour
         nave.ResetarNave(pos);
         
         estadoAtual = Estado.Mapa;
+    }
+
+        // ===== FUNÇÕES DE ÓRBITA =====
+    void VerificarProximidadeOrbita()
+    {
+        if (nave == null) return;
+
+        Planet[] planetas = FindObjectsOfType<Planet>();
+        foreach (Planet p in planetas)
+        {
+            float dist = Vector2.Distance(nave.transform.position, p.transform.position);
+            
+            // Se estiver perto do planeta
+            if (dist < (p.raio + raioOrbita))
+            {
+                planetaAlvo = p;
+                
+                // Mostra o texto
+                if (painelTextoOrbita) painelTextoOrbita.SetActive(true);
+                if (textoOrbita) textoOrbita.text = "Pressione 'O' para entrar em órbita";
+                
+                // Se apertou 'O', entra em órbita
+                if (Input.GetKeyDown(KeyCode.O))
+                {
+                    EntrarEmOrbita();
+                }
+                return;
+            }
+        }
+        
+        // Se não estiver perto, esconde o texto
+        if (painelTextoOrbita && estadoAtual != Estado.EmOrbita) painelTextoOrbita.SetActive(false);
+    }
+
+    void EntrarEmOrbita()
+    {
+        estadoAtual = Estado.EmOrbita;
+        painelDecisaoPouso.SetActive(false);
+        if (textoOrbita) textoOrbita.text = "Pressione 'O' para sair da órbita";
+        nave.IniciarOrbita(planetaAlvo);
+    }
+
+    public void SairDaOrbita()
+    {
+        estadoAtual = Estado.Mapa;
+        if (textoOrbita) textoOrbita.text = "Pressione 'O' para entrar em órbita";
+        nave.SairDaOrbita();
+        
+        // Atualiza o texto para ver se ainda está perto
+        VerificarProximidadeOrbita();
     }
 }
