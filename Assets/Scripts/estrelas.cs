@@ -53,6 +53,11 @@ public class EstrelasParallax : MonoBehaviour
             Destroy(estrela.GetComponent<Collider>());
             estrela.GetComponent<Renderer>().material.color = Color.white;
 
+            estrela.GetComponent<Renderer>().material = new Material(Shader.Find("Sprites/Default"));
+
+            // Coloca a estrela em uma camada bem negativa (atrás de todos os sprites)
+            estrela.GetComponent<Renderer>().sortingOrder = -20;
+
             float tamanho = Random.Range(tamanhoMinimo, tamanhoMaximo);
             estrela.transform.localScale = Vector3.one * tamanho;
 
