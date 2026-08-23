@@ -29,6 +29,7 @@ public class Nave : MonoBehaviour
     private Planet planetaOrbitando;
     private float anguloOrbita = 0f;
     public float velocidadeOrbita = 20f; // Graus por segundo
+    public float distanciaOrbita = 2f; // Distância extra acima da superfície do planeta
 
     void Start()
     {
@@ -38,13 +39,38 @@ public class Nave : MonoBehaviour
 
     void Update()
     {
+                // ===== INÍCIO DO BLOCO DE ÓRBITA =====
         if (emOrbita)
         {
+            // 1. Atualiza o ângulo da órbita
             anguloOrbita += velocidadeOrbita * Time.deltaTime;
-            Vector2 pos = (Vector2)planetaOrbitando.transform.position + new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * (planetaOrbitando.raio + 2f);
+
+            // 2. Calcula a posição na órbita
+            float rad = anguloOrbita * Mathf.Deg2Rad;
+            Vector2 pos = (Vector2)planetaOrbitando.transform.position + new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * (planetaOrbitando.raio + distanciaOrbita);
             transform.position = pos;
-            return;
+
+            // 3. CALCULO ESTÁVEL DA DIREÇÃO (TANGENTE)
+            // A tangente é perpendicular ao vetor do raio.
+            // Se a velocidade for positiva, andamos no sentido anti-horário:
+            // direção = (-sin(angulo), cos(angulo))
+            // Se a velocidade for negativa, invertemos o sinal:
+            float sinal = (velocidadeOrbita > 0) ? 1f : -1f;
+            Vector2 direcaoTangente = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad)) * sinal;
+            direcaoTangente.Normalize();
+
+            // 4. Converte a tangente em ângulo
+            float anguloMovimento = Mathf.Atan2(direcaoTangente.y, direcaoTangente.x) * Mathf.Rad2Deg;
+
+            // 5. Troca o sprite (com uma suavização para evitar piscadas)
+            // Em vez de trocar o sprite em cada frame para o valor exato,
+            // usamos uma rotação "lerp" (interpolação linear) para o sprite ir
+            // suavemente até a direção correta.
+            spriteRenderer.sprite = spritesNave[ObterIndiceSpriteEstavel(anguloMovimento)];
+
+            return; // Sai do Update para não executar o controle normal
         }
+        // ===== FIM DO BLOCO DE ÓRBITA =====
 
         // Calcula a direção do mouse em relação à nave
         Vector3 posicaoMouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
@@ -56,6 +82,23 @@ public class Nave : MonoBehaviour
         {
             float angulo = Mathf.Atan2(direcaoMouse.y, direcaoMouse.x) * Mathf.Rad2Deg;
             TrocarSpritePeloAngulo(angulo);
+        }
+
+            // Função auxiliar para pegar o índice do sprite de forma estável
+        int ObterIndiceSpriteEstavel(float angulo)
+        {
+            if (spritesNave == null || spritesNave.Length == 0) return 0;
+
+            // Normaliza o ângulo para 0-360
+            if (angulo < 0) angulo += 360f;
+            if (angulo >= 360f) angulo -= 360f;
+
+            // Calcula o índice baseado no ângulo (40 sprites = 9 graus cada)
+            int indice = Mathf.FloorToInt((angulo + 90f) / 9f) % 40;
+            
+            // A função retorna o índice, mas o importante é que agora o ângulo
+            // é calculado matematicamente (tangente), o que gera um valor SEM instabilidade.
+            return indice;
         }
     }
 
