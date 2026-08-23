@@ -346,6 +346,7 @@ GameObject:
   - component: {fileID: 168305595}
   - component: {fileID: 168305598}
   - component: {fileID: 168305599}
+  - component: {fileID: 168305600}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -483,8 +484,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4617a6dda58ba4347b5b53f6a7bedcca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  alvo: {fileID: 0}
+  alvo: {fileID: 625869201}
   suavidade: 0.1
+--- !u!114 &168305600
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 168305594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f47faba0c4d6ddd48aee938ab7a7cba1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CameraZoom
+  zoomSpeed: 4
+  minZoom: 3
+  maxZoom: 40
 --- !u!1001 &210204977
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -719,7 +735,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &307733593
 RectTransform:
   m_ObjectHideFlags: 0
@@ -1083,6 +1099,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameController
   nave: {fileID: 625869197}
   cameraPrincipal: {fileID: 168305596}
+  textoOrbita: {fileID: 774458265}
+  painelTextoOrbita: {fileID: 307733592}
+  raioOrbita: 20
   painelDecisaoPouso: {fileID: 445700090}
   painelPouso: {fileID: 21374691}
   painelExploracao: {fileID: 1676415083}
@@ -1917,7 +1936,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   velocidadeMaxima: 10
   aceleracao: 2
-  freio: 25
+  freio: 2
   constanteGravitacional: 0.5
   distanciaMinima: 0.5
   combustivel: 100
@@ -1964,7 +1983,8 @@ MonoBehaviour:
   - {fileID: 1938374267, guid: 2aa3ad62af8df334a821a5214566cb6e, type: 3}
   - {fileID: 986053978, guid: 2aa3ad62af8df334a821a5214566cb6e, type: 3}
   - {fileID: 1541627920, guid: 2aa3ad62af8df334a821a5214566cb6e, type: 3}
-  velocidadeOrbita: 20
+  velocidadeOrbita: 5
+  distanciaOrbita: 15
 --- !u!50 &625869199
 Rigidbody2D:
   serializedVersion: 5
