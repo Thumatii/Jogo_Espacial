@@ -169,8 +169,8 @@ public class Nave : MonoBehaviour
         rb.angularVelocity = 0f;
 
         // ===== ATIVA O CÍRCULO COM A DISTÂNCIA EXATA =====
-        OrbitaLine orbitaVisual = planeta.GetComponentInChildren<OrbitaLine>();
-        if (orbitaVisual != null) orbitaVisual.Ativar(distanciaOrbita);
+        OrbitaVisual visual = planeta.GetComponentInChildren<OrbitaVisual>();
+        if (visual != null) visual.Ativar(distanciaOrbita);
         // ===============================================
     }
 
@@ -186,8 +186,8 @@ public class Nave : MonoBehaviour
         // ===== DESATIVA O CÍRCULO =====
         if (planetaSaindo != null)
         {
-            OrbitaLine orbitaVisual = planetaSaindo.GetComponentInChildren<OrbitaLine>();
-            if (orbitaVisual != null) orbitaVisual.Desativar();
+            OrbitaVisual visual = planetaSaindo.GetComponentInChildren<OrbitaVisual>();
+            if (visual != null) visual.Desativar();
         }
         // =============================
     }
