@@ -34,8 +34,18 @@ public class OrbitaVisual : MonoBehaviour
             // Remove o Colisor (para não atrapalhar a física)
             Destroy(ponto.GetComponent<Collider>());
 
-            // Pinta de ciano
+            // =========================================================
+            // CORREÇÃO: Força a esfera a respeitar a ordem 2D (ficar atrás da nave)
+            // =========================================================
+            // 1. Troca o material para o Sprites/Default (essencial para 2D)
+            ponto.GetComponent<Renderer>().material = new Material(Shader.Find("Sprites/Default"));
+            
+            // 2. Define a cor do ponto
             ponto.GetComponent<Renderer>().material.color = corPontos;
+            
+            // 3. Coloca o ponto em uma camada bem negativa para ficar ATRÁS da nave
+            ponto.GetComponent<Renderer>().sortingOrder = -10;
+            // =========================================================
 
             // Define o tamanho
             ponto.transform.localScale = Vector3.one * tamanhoPonto;
