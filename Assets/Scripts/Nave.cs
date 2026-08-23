@@ -24,6 +24,12 @@ public class Nave : MonoBehaviour
     private Rigidbody2D rb;
     private Vector2 direcaoMouse;
 
+        // ===== VARIÁVEIS DE ÓRBITA =====
+    private bool emOrbita = false;
+    private Planet planetaOrbitando;
+    private float anguloOrbita = 0f;
+    public float velocidadeOrbita = 20f; // Graus por segundo
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -32,6 +38,14 @@ public class Nave : MonoBehaviour
 
     void Update()
     {
+        if (emOrbita)
+        {
+            anguloOrbita += velocidadeOrbita * Time.deltaTime;
+            Vector2 pos = (Vector2)planetaOrbitando.transform.position + new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * (planetaOrbitando.raio + 2f);
+            transform.position = pos;
+            return;
+        }
+
         // Calcula a direção do mouse em relação à nave
         Vector3 posicaoMouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         posicaoMouse.z = 0f;
@@ -99,5 +113,26 @@ public class Nave : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         velocidadeAtual = 0f;
         transform.position = posicao;
+    }
+
+        // ===== FUNÇÕES DE ÓRBITA =====
+    public void IniciarOrbita(Planet planeta)
+    {
+        emOrbita = true;
+        planetaOrbitando = planeta;
+        Vector2 dir = ((Vector2)transform.position - (Vector2)planeta.transform.position).normalized;
+        anguloOrbita = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
+        
+        // Zera a velocidade para não ter inércia
+        rb.linearVelocity = Vector2.zero;
+        rb.angularVelocity = 0f;
+    }
+
+    public void SairDaOrbita()
+    {
+        emOrbita = false;
+        planetaOrbitando = null;
+        // Dá um pequeno impulso para fora (ou zera a velocidade)
+        rb.linearVelocity = Vector2.zero;
     }
 }
