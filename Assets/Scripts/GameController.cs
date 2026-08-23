@@ -159,26 +159,30 @@ public class GameController : MonoBehaviour
         estadoAtual = Estado.Mapa;
     }
 
-        // ===== FUNÇÕES DE ÓRBITA =====
+    private float tempoParaReentrarOrbita = 0f; // Variável de controle
+
     void VerificarProximidadeOrbita()
     {
         if (nave == null) return;
+
+        // Diminui o tempo de proteção
+        if (tempoParaReentrarOrbita > 0)
+        {
+            tempoParaReentrarOrbita -= Time.deltaTime;
+            if (painelTextoOrbita) painelTextoOrbita.SetActive(false);
+            return;
+        }
 
         Planet[] planetas = FindObjectsOfType<Planet>();
         foreach (Planet p in planetas)
         {
             float dist = Vector2.Distance(nave.transform.position, p.transform.position);
-            
-            // Se estiver perto do planeta
             if (dist < (p.raio + raioOrbita))
             {
                 planetaAlvo = p;
-                
-                // Mostra o texto
                 if (painelTextoOrbita) painelTextoOrbita.SetActive(true);
                 if (textoOrbita) textoOrbita.text = "Pressione 'O' para entrar em órbita";
                 
-                // Se apertou 'O', entra em órbita
                 if (Input.GetKeyDown(KeyCode.O))
                 {
                     EntrarEmOrbita();
@@ -187,7 +191,6 @@ public class GameController : MonoBehaviour
             }
         }
         
-        // Se não estiver perto, esconde o texto
         if (painelTextoOrbita && estadoAtual != Estado.EmOrbita) painelTextoOrbita.SetActive(false);
     }
 
@@ -203,9 +206,14 @@ public class GameController : MonoBehaviour
     {
         estadoAtual = Estado.Mapa;
         if (textoOrbita) textoOrbita.text = "Pressione 'O' para entrar em órbita";
+        
+        // Chama a função na nave para sair do modo órbita
         nave.SairDaOrbita();
         
-        // Atualiza o texto para ver se ainda está perto
-        VerificarProximidadeOrbita();
+        // Ativa a proteção de 1 segundo para não re-entrar imediatamente
+        tempoParaReentrarOrbita = 1.0f; // Ajuste esse valor se quiser mais ou menos tempo
+        
+        // Esconde o painel (se estiver visível)
+        if (painelTextoOrbita) painelTextoOrbita.SetActive(false);
     }
 }
