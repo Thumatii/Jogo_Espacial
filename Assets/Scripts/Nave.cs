@@ -158,7 +158,6 @@ public class Nave : MonoBehaviour
         transform.position = posicao;
     }
 
-        // ===== FUNÇÕES DE ÓRBITA =====
     public void IniciarOrbita(Planet planeta)
     {
         emOrbita = true;
@@ -166,16 +165,30 @@ public class Nave : MonoBehaviour
         Vector2 dir = ((Vector2)transform.position - (Vector2)planeta.transform.position).normalized;
         anguloOrbita = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
         
-        // Zera a velocidade para não ter inércia
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
+
+        // ===== ATIVA O CÍRCULO COM A DISTÂNCIA EXATA =====
+        OrbitaLine orbitaVisual = planeta.GetComponentInChildren<OrbitaLine>();
+        if (orbitaVisual != null) orbitaVisual.Ativar(distanciaOrbita);
+        // ===============================================
     }
 
     public void SairDaOrbita()
     {
+        // Guarda o planeta antes de zerar a variável
+        Planet planetaSaindo = planetaOrbitando;
+
         emOrbita = false;
         planetaOrbitando = null;
-        // Dá um pequeno impulso para fora (ou zera a velocidade)
         rb.linearVelocity = Vector2.zero;
+
+        // ===== DESATIVA O CÍRCULO =====
+        if (planetaSaindo != null)
+        {
+            OrbitaLine orbitaVisual = planetaSaindo.GetComponentInChildren<OrbitaLine>();
+            if (orbitaVisual != null) orbitaVisual.Desativar();
+        }
+        // =============================
     }
 }
