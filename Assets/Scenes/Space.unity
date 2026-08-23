@@ -207,7 +207,7 @@ GameObject:
   - component: {fileID: 55845024}
   - component: {fileID: 55845026}
   - component: {fileID: 55845025}
-  m_Layer: 5
+  m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -592,7 +592,7 @@ GameObject:
   - component: {fileID: 307050990}
   - component: {fileID: 307050992}
   - component: {fileID: 307050991}
-  m_Layer: 5
+  m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1173,7 +1173,7 @@ GameObject:
   - component: {fileID: 442142773}
   - component: {fileID: 442142772}
   - component: {fileID: 442142771}
-  m_Layer: 5
+  m_Layer: 0
   m_Name: BotaoIrPlaneta
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1305,7 +1305,7 @@ GameObject:
   - component: {fileID: 445700091}
   - component: {fileID: 445700093}
   - component: {fileID: 445700092}
-  m_Layer: 5
+  m_Layer: 0
   m_Name: PainelDecisaoPouso
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1383,7 +1383,7 @@ GameObject:
   - component: {fileID: 479960417}
   - component: {fileID: 479960419}
   - component: {fileID: 479960418}
-  m_Layer: 5
+  m_Layer: 0
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1538,7 +1538,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb26aa5fe6e8b8040a71c28f3e6f9ec3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EstrelasParallax
-  quantidadeEstrelas: 500
+  quantidadeEstrelas: 250
   tamanhoMinimo: 0.1
   tamanhoMaximo: 0.2
   velocidadeBase: 1
@@ -1573,7 +1573,7 @@ GameObject:
   - component: {fileID: 504740147}
   - component: {fileID: 504740146}
   - component: {fileID: 504740145}
-  m_Layer: 5
+  m_Layer: 0
   m_Name: BotaoVoltarEspaco
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3019,6 +3019,26 @@ PrefabInstance:
     - target: {fileID: 2221651628463554591, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
       propertyPath: m_Name
       value: Planet (4)
+      objectReference: {fileID: 0}
+    - target: {fileID: 2221651628463554591, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6403554897977483708, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
+      propertyPath: m_Color.b
+      value: 0.2285066
+      objectReference: {fileID: 0}
+    - target: {fileID: 6403554897977483708, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
+      propertyPath: m_Color.g
+      value: 0.44324496
+      objectReference: {fileID: 0}
+    - target: {fileID: 6403554897977483708, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
+      propertyPath: m_Color.r
+      value: 0.745283
+      objectReference: {fileID: 0}
+    - target: {fileID: 6403554897977483708, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
+      propertyPath: m_SortingOrder
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6629975609787852804, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
       propertyPath: m_Radius
@@ -5194,7 +5214,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::OrbitaVisual
   quantidadePontos: 950
   tamanhoPonto: 0.0015
-  corPontos: {r: 0, g: 1, b: 1, a: 1}
+  corPontos: {r: 0.2216981, g: 0.7859104, b: 1, a: 1}
 --- !u!1 &1844861880
 GameObject:
   m_ObjectHideFlags: 0
