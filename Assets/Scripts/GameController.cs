@@ -41,7 +41,6 @@ public class GameController : MonoBehaviour
 
     void Update()
     {
-        // Verifica colisão APENAS se estiver no espaço
         if (estadoAtual == Estado.Mapa && nave != null)
         {
             Planet[] planetas = FindObjectsOfType<Planet>();
