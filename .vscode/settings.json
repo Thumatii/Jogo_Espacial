@@ -56,5 +56,5 @@
         "temp/": true,
         "Temp/": true
     },
-    "dotnet.defaultSolution": "projeto espacial.slnx"
+    "dotnet.defaultSolution": "Jogo_Espacial.slnx"
 }
