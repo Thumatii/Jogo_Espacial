@@ -1989,6 +1989,7 @@ MonoBehaviour:
   velocidadeMaxima: 15
   aceleracao: 2
   freio: 2
+  velocidadeRotacao: 10
   constanteGravitacional: 0.5
   distanciaMinima: 0.5
   combustivel: 100
@@ -2035,8 +2036,8 @@ MonoBehaviour:
   - {fileID: 1938374267, guid: 2aa3ad62af8df334a821a5214566cb6e, type: 3}
   - {fileID: 986053978, guid: 2aa3ad62af8df334a821a5214566cb6e, type: 3}
   - {fileID: 1541627920, guid: 2aa3ad62af8df334a821a5214566cb6e, type: 3}
-  velocidadeOrbita: 2
   distanciaOrbita: 15
+  velocidadeOrbita: 1
 --- !u!50 &625869199
 Rigidbody2D:
   serializedVersion: 5
@@ -3010,7 +3011,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1583126209326486308, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
       propertyPath: massa
-      value: 20
+      value: 5000
       objectReference: {fileID: 0}
     - target: {fileID: 1583126209326486308, guid: 7fd95d9703ba05b4b9d66ffa528cf027, type: 3}
       propertyPath: nomePlaneta
