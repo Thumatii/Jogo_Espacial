@@ -6,7 +6,7 @@ public class Nave : MonoBehaviour
     public float velocidadeMaxima = 10f;    
     public float aceleracao = 15f;          
     public float freio = 25f;               
-    // (Removemos a velocidade de rotação, pois o Transform não vai mais girar)
+    public float velocidadeRotacao = 10f;   // Usada para suavizar o controle normal
 
     [Header("Gravidade (calculada manualmente)")]
     public float constanteGravitacional = 20f; 
@@ -20,16 +20,24 @@ public class Nave : MonoBehaviour
     public SpriteRenderer spriteRenderer;
     public Sprite[] spritesNave; 
 
+    [Header("Órbita")]
+    public float distanciaOrbita = 5f;      
+    public float velocidadeOrbita = 20f;    
+
     private float velocidadeAtual = 0f;
     private Rigidbody2D rb;
     private Vector2 direcaoMouse;
 
-        // ===== VARIÁVEIS DE ÓRBITA =====
     private bool emOrbita = false;
     private Planet planetaOrbitando;
     private float anguloOrbita = 0f;
-    public float velocidadeOrbita = 20f; // Graus por segundo
-    public float distanciaOrbita = 2f; // Distância extra acima da superfície do planeta
+
+    // Variáveis do deslize
+    private bool emTransicao = false;
+    private Vector3 posicaoInicial;
+    private Vector3 posicaoAlvo;
+    private float progressoTransicao = 0f;
+    private float tempoTransicao = 1.5f; 
 
     void Start()
     {
@@ -39,86 +47,75 @@ public class Nave : MonoBehaviour
 
     void Update()
     {
-                // ===== INÍCIO DO BLOCO DE ÓRBITA =====
+        // ===== BLOCO DE ÓRBITA =====
         if (emOrbita)
         {
-            // 1. Atualiza o ângulo da órbita
-            anguloOrbita += velocidadeOrbita * Time.deltaTime;
+            if (emTransicao)
+            {
+                progressoTransicao += Time.deltaTime / tempoTransicao;
+                if (progressoTransicao >= 1f)
+                {
+                    progressoTransicao = 1f;
+                    emTransicao = false;
+                }
+                transform.position = Vector3.Lerp(posicaoInicial, posicaoAlvo, progressoTransicao);
+                
+                // Durante o deslize, use a direção do movimento (sem suavizar para não travar)
+                Vector2 direcaoDeslize = (posicaoAlvo - posicaoInicial).normalized;
+                if (direcaoDeslize.sqrMagnitude > 0.01f)
+                {
+                    float anguloAlvo = Mathf.Atan2(direcaoDeslize.y, direcaoDeslize.x) * Mathf.Rad2Deg;
+                    TrocarSpritePeloAngulo(anguloAlvo);
+                }
+                return;
+            }
 
-            // 2. Calcula a posição na órbita
-            float rad = anguloOrbita * Mathf.Deg2Rad;
-            Vector2 pos = (Vector2)planetaOrbitando.transform.position + new Vector2(Mathf.Cos(rad), Mathf.Sin(rad)) * (planetaOrbitando.raio + distanciaOrbita);
+            // Depois do deslize, órbita normal
+            anguloOrbita += velocidadeOrbita * Time.deltaTime;
+            Vector2 pos = (Vector2)planetaOrbitando.transform.position + new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * (planetaOrbitando.raio + distanciaOrbita);
             transform.position = pos;
 
-            // 3. CALCULO ESTÁVEL DA DIREÇÃO (TANGENTE)
-            // A tangente é perpendicular ao vetor do raio.
-            // Se a velocidade for positiva, andamos no sentido anti-horário:
-            // direção = (-sin(angulo), cos(angulo))
-            // Se a velocidade for negativa, invertemos o sinal:
-            float sinal = (velocidadeOrbita > 0) ? 1f : -1f;
-            Vector2 direcaoTangente = new Vector2(-Mathf.Sin(rad), Mathf.Cos(rad)) * sinal;
-            direcaoTangente.Normalize();
+            // ===== TROCA DE SPRITE ESTÁVEL USANDO A TANGENTE =====
+            // O ângulo da tangente é sempre +90° (ou -90°) em relação ao raio.
+            // Isso é matemática pura, não depende de posição anterior, então é 100% estável.
+            float anguloTangente = anguloOrbita + 90f; // Ajuste o sinal se a órbita for ao contrário
+            TrocarSpritePeloAngulo(anguloTangente);
+            // ====================================================
 
-            // 4. Converte a tangente em ângulo
-            float anguloMovimento = Mathf.Atan2(direcaoTangente.y, direcaoTangente.x) * Mathf.Rad2Deg;
-
-            // 5. Troca o sprite (com uma suavização para evitar piscadas)
-            // Em vez de trocar o sprite em cada frame para o valor exato,
-            // usamos uma rotação "lerp" (interpolação linear) para o sprite ir
-            // suavemente até a direção correta.
-            spriteRenderer.sprite = spritesNave[ObterIndiceSpriteEstavel(anguloMovimento)];
-
-            return; // Sai do Update para não executar o controle normal
+            return;
         }
         // ===== FIM DO BLOCO DE ÓRBITA =====
 
-        // Calcula a direção do mouse em relação à nave
+        // ===== CONTROLE NORMAL =====
         Vector3 posicaoMouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         posicaoMouse.z = 0f;
         direcaoMouse = (posicaoMouse - transform.position).normalized;
 
-        // Se o mouse não estiver em cima da nave, calcula o ângulo e troca o sprite
         if (direcaoMouse.sqrMagnitude > 0.01f)
         {
             float angulo = Mathf.Atan2(direcaoMouse.y, direcaoMouse.x) * Mathf.Rad2Deg;
-            TrocarSpritePeloAngulo(angulo);
-        }
-
-            // Função auxiliar para pegar o índice do sprite de forma estável
-        int ObterIndiceSpriteEstavel(float angulo)
-        {
-            if (spritesNave == null || spritesNave.Length == 0) return 0;
-
-            // Normaliza o ângulo para 0-360
-            if (angulo < 0) angulo += 360f;
-            if (angulo >= 360f) angulo -= 360f;
-
-            // Calcula o índice baseado no ângulo (40 sprites = 9 graus cada)
-            int indice = Mathf.FloorToInt((angulo + 90f) / 9f) % 40;
-            
-            // A função retorna o índice, mas o importante é que agora o ângulo
-            // é calculado matematicamente (tangente), o que gera um valor SEM instabilidade.
-            return indice;
+            // Usamos suavização apenas no controle normal (fora da órbita)
+            anguloSpriteAtual = Mathf.LerpAngle(anguloSpriteAtual, angulo, Time.deltaTime * velocidadeRotacao);
+            TrocarSpritePeloAngulo(anguloSpriteAtual);
         }
     }
+
+    // Variável para suavizar o controle normal
+    private float anguloSpriteAtual = 0f;
 
     void TrocarSpritePeloAngulo(float angulo)
     {
         if (spritesNave == null || spritesNave.Length == 0) return;
 
-        // Normaliza o ângulo para 0-360
         if (angulo < 0) angulo += 360f;
-
-        // 40 sprites = 360 / 40 = 9 graus por sprite
-        int indice = (Mathf.FloorToInt((angulo + 90f) / 9f) % 40);
-
+        int indice = Mathf.FloorToInt((angulo + 90f) / 9f) % 40;
         spriteRenderer.sprite = spritesNave[indice];
-        print("Valores, " + angulo +", "+ indice);
     }
 
     void FixedUpdate()
     {
-        // Acelerar (W) e Frear (S) usando a direção do mouse
+        if (emOrbita || emTransicao) return;
+
         if (Input.GetKey(KeyCode.W))
         {
             velocidadeAtual += aceleracao * Time.fixedDeltaTime;
@@ -129,7 +126,6 @@ public class Nave : MonoBehaviour
         }
         velocidadeAtual = Mathf.Clamp(velocidadeAtual, 0f, velocidadeMaxima);
 
-        // Cálculo da gravidade (igual ao seu GravitySystem)
         Vector2 forcaGravidadeTotal = Vector2.zero;
         Planet[] planetas = FindObjectsOfType<Planet>();
 
@@ -145,50 +141,55 @@ public class Nave : MonoBehaviour
             }
         }
 
-        // Define a velocidade da nave APONTANDO para o mouse (sem girar o Transform)
-        // Isso mantém a mecânica de "sempre se move aonde aponta", mas sem girar o objeto
         Vector2 velocidadeFrente = direcaoMouse * velocidadeAtual;
         rb.linearVelocity = velocidadeFrente + forcaGravidadeTotal;
     }
 
-    public void ResetarNave(Vector2 posicao)
-    {
-        rb.linearVelocity = Vector2.zero;
-        velocidadeAtual = 0f;
-        transform.position = posicao;
-    }
-
     public void IniciarOrbita(Planet planeta)
     {
-        emOrbita = true;
         planetaOrbitando = planeta;
+        anguloSpriteAtual = 0f;
+
         Vector2 dir = ((Vector2)transform.position - (Vector2)planeta.transform.position).normalized;
         anguloOrbita = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;
-        
+        float raioOrbita = planeta.raio + distanciaOrbita;
+        posicaoAlvo = (Vector2)planeta.transform.position + new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * raioOrbita;
+        posicaoAlvo.z = 0;
+
+        posicaoInicial = transform.position;
+        progressoTransicao = 0f;
+        emTransicao = true;
+        emOrbita = true;
+
         rb.linearVelocity = Vector2.zero;
         rb.angularVelocity = 0f;
 
-        // ===== ATIVA O CÍRCULO COM A DISTÂNCIA EXATA =====
-        OrbitaVisual visual = planeta.GetComponentInChildren<OrbitaVisual>();
-        if (visual != null) visual.Ativar(distanciaOrbita);
-        // ===============================================
+        OrbitaVisual orbitaVisual = planeta.GetComponentInChildren<OrbitaVisual>();
+        if (orbitaVisual != null) orbitaVisual.Ativar(distanciaOrbita);
     }
 
     public void SairDaOrbita()
     {
-        // Guarda o planeta antes de zerar a variável
         Planet planetaSaindo = planetaOrbitando;
 
         emOrbita = false;
+        emTransicao = false;
         planetaOrbitando = null;
         rb.linearVelocity = Vector2.zero;
 
-        // ===== DESATIVA O CÍRCULO =====
         if (planetaSaindo != null)
         {
-            OrbitaVisual visual = planetaSaindo.GetComponentInChildren<OrbitaVisual>();
-            if (visual != null) visual.Desativar();
+            OrbitaVisual orbitaVisual = planetaSaindo.GetComponentInChildren<OrbitaVisual>();
+            if (orbitaVisual != null) orbitaVisual.Desativar();
         }
-        // =============================
+    }
+
+    public void ResetarNave(Vector2 posicao)
+    {
+        emOrbita = false;
+        emTransicao = false;
+        rb.linearVelocity = Vector2.zero;
+        velocidadeAtual = 0f;
+        transform.position = posicao;
     }
 }
