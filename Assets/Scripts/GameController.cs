@@ -13,6 +13,12 @@ public class GameController : MonoBehaviour
     public TextMeshProUGUI textoOrbita; // O texto que vai aparecer embaixo
     public GameObject painelTextoOrbita; // O GameObject que segura esse texto (Painel/Imagem)
     public float raioOrbita = 5f; // Distância extra para detectar proximidade
+
+    [Header("Satélite e Tabela")]
+    public GameObject satellitePrefab;         // Arraste um GameObject pequeno (esfera/sprite) com o script Satellite
+    public TextMeshProUGUI mensagemOrbita;     // Texto da mensagem "Pressione F..."
+    public GameObject painelTabela;            // Painel que abre com TAB
+    public TextMeshProUGUI textoInfoPlanetas;  // Texto dentro do painel
     
     [Header("UI (Painéis)")]
     public GameObject painelDecisaoPouso; // Painel dos botões
@@ -66,6 +72,44 @@ public class GameController : MonoBehaviour
             if (Input.GetKeyDown(KeyCode.O))
             {
                 SairDaOrbita();
+            }
+        }
+        
+        if (estadoAtual == Estado.EmOrbita)
+        {
+            // Mostra a mensagem
+            if (mensagemOrbita != null) mensagemOrbita.gameObject.SetActive(true);
+            mensagemOrbita.text = "Pressione F para lançar satélite";
+
+            // Lança satélite ao apertar F
+            if (Input.GetKeyDown(KeyCode.F) && satellitePrefab != null && planetaAlvo != null)
+            {
+                GameObject sat = Instantiate(satellitePrefab, Vector3.zero, Quaternion.identity);
+                Satellite satScript = sat.GetComponent<Satellite>();
+                if (satScript != null)
+                {
+                    satScript.planetaAlvo = planetaAlvo;
+                    // Opcional: ajustar tempo de vida aqui
+                }
+                mensagemOrbita.text = "Satélite lançado!";
+            }
+        }
+        else
+        {
+            if (mensagemOrbita != null) mensagemOrbita.gameObject.SetActive(false);
+        }
+
+        // Abre/Fecha a tabela com TAB
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            if (painelTabela != null)
+            {
+                bool ativo = painelTabela.activeSelf;
+                painelTabela.SetActive(!ativo);
+                if (!ativo) // Se acabou de abrir, atualiza a lista
+                {
+                    AtualizarTabela();
+                }
             }
         }
     }
@@ -215,5 +259,36 @@ public class GameController : MonoBehaviour
         
         // Esconde o painel (se estiver visível)
         if (painelTextoOrbita) painelTextoOrbita.SetActive(false);
+    }
+
+    void AtualizarTabela()
+    {
+        if (textoInfoPlanetas == null) return;
+
+        string tabela = "Planetas Explorados:\n\n";
+        Planet[] planetas = FindObjectsOfType<Planet>();
+        bool algumExplorado = false;
+
+        foreach (Planet p in planetas)
+        {
+            if (p.explorado)
+            {
+                algumExplorado = true;
+                tabela += $"Nome: {p.nomePlaneta}\n";
+                tabela += $"Massa: {p.massa}\n";
+                tabela += $"Força Gravitacional: {p.forcaGravitacional}\n";
+                tabela += $"Tem Vida: {(p.temVida ? "Sim" : "Não")}\n";
+                tabela += $"Tipo de Vida: {p.tipoVida}\n";
+                tabela += $"Seres Inteligentes: {(p.temSeresInteligentes ? "Sim" : "Não")}\n";
+                tabela += "-------------------------\n";
+            }
+        }
+
+        if (!algumExplorado)
+        {
+            tabela = "Nenhum planeta explorado ainda.";
+        }
+
+        textoInfoPlanetas.text = tabela;
     }
 }
