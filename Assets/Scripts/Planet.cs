@@ -2,10 +2,16 @@ using UnityEngine;
 
 public class Planet : MonoBehaviour
 {
-    [Header("Informações do planeta")]
     public string nomePlaneta;
+    public float raio = 2f;
+    public float massa = 5f; // Já existia
 
-    public float massa = 1000f;
+    [Header("Informações para o Satélite/Tabela")]
+    public float forcaGravitacional;
+    public bool temVida;
+    public string tipoVida; // Ex: "Nenhuma", "Microbiana", "Inteligente"
+    public bool temSeresInteligentes;
 
-    public float raio = 1f;
+    [Header("Exploração")]
+    public bool explorado = false; // Marca se já foi explorado
 }
