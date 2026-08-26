@@ -205,10 +205,11 @@ public class GameController : MonoBehaviour
     {
         estadoAtual = Estado.Mapa;
         if (textoOrbita) textoOrbita.text = "Pressione 'O' para entrar em órbita";
-        
+
         // Chama a função na nave para sair do modo órbita
         nave.SairDaOrbita();
-        
+
+
         // Ativa a proteção de 1 segundo para não re-entrar imediatamente
         tempoParaReentrarOrbita = 1.0f; // Ajuste esse valor se quiser mais ou menos tempo
         

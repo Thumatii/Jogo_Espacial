@@ -107,8 +107,13 @@ public class Nave : MonoBehaviour
     {
         if (spritesNave == null || spritesNave.Length == 0) return;
 
-        if (angulo < 0) angulo += 360f;
-        int indice = Mathf.FloorToInt((angulo + 90f) / 9f) % 40;
+        // Pega o angulo
+        float anguloNormalizado = Mathf.Repeat(angulo + 90f, 360f);
+
+        // Calcula o "índice" e usamos o .Length em vez do 40, nn entendi pq 40
+        // se você adicionar ou remover sprites no Inspector toma cuidado
+        int indice = Mathf.FloorToInt(anguloNormalizado / 9f) % spritesNave.Length;
+
         spriteRenderer.sprite = spritesNave[indice];
     }
 
