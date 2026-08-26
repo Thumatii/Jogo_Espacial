@@ -500,7 +500,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraZoom
   vcam: {fileID: 0}
-  zoomSpeed: 4
+  zoomSpeed: 7
   minZoom: 3
   maxZoom: 40
 --- !u!114 &168305601
@@ -1596,14 +1596,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fb26aa5fe6e8b8040a71c28f3e6f9ec3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EstrelasParallax
-  quantidadeEstrelas: 250
+  quantidadeEstrelas: 500
   tamanhoMinimo: 0.1
   tamanhoMaximo: 0.15
   velocidadeBase: 1
   fatorProfundidade: 4
   moverParaEsquerda: 1
   moverParaCima: 0
-  zoomMaximoOrtho: 20
+  zoomMaximoOrtho: 40
 --- !u!4 &485757518
 Transform:
   m_ObjectHideFlags: 0
@@ -6218,7 +6218,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: cc9032031af9bba49a1bc60b80730122, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -59.2
+      value: -66
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: cc9032031af9bba49a1bc60b80730122, type: 3}
       propertyPath: m_LocalPosition.y
