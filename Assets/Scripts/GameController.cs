@@ -1,9 +1,13 @@
 using UnityEngine;
 using TMPro;
 
+
+
 public class GameController : MonoBehaviour
 {
     public enum Estado { Mapa, Decisao, MinigamePouso, ExplorandoPlaneta, EmOrbita }
+
+    private bool sateliteJaLancado = false;
 
     [Header("Referências de Objetos")]
     public Nave nave;
@@ -74,24 +78,39 @@ public class GameController : MonoBehaviour
                 SairDaOrbita();
             }
         }
-        
         if (estadoAtual == Estado.EmOrbita)
         {
-            // Mostra a mensagem
-            if (mensagemOrbita != null) mensagemOrbita.gameObject.SetActive(true);
-            mensagemOrbita.text = "Pressione F para lançar satélite";
-
-            // Lança satélite ao apertar F
-            if (Input.GetKeyDown(KeyCode.F) && satellitePrefab != null && planetaAlvo != null)
+            if (planetaAlvo != null)
             {
-                GameObject sat = Instantiate(satellitePrefab, Vector3.zero, Quaternion.identity);
-                Satellite satScript = sat.GetComponent<Satellite>();
-                if (satScript != null)
+                // Verifica a flag do planeta
+                if (planetaAlvo.sateliteLancado)
                 {
-                    satScript.planetaAlvo = planetaAlvo;
-                    // Opcional: ajustar tempo de vida aqui
+                    // Já lançou, mensagem some (mesmo que o satélite já tenha sido destruído)
+                    if (mensagemOrbita != null) mensagemOrbita.gameObject.SetActive(false);
                 }
-                mensagemOrbita.text = "Satélite lançado!";
+                else
+                {
+                    // Ainda não lançou, mostra mensagem
+                    if (mensagemOrbita != null)
+                    {
+                        mensagemOrbita.gameObject.SetActive(true);
+                        mensagemOrbita.text = "Pressione F para lançar satélite";
+                    }
+
+                    // Lança satélite ao apertar F
+                    if (Input.GetKeyDown(KeyCode.F) && satellitePrefab != null)
+                    {
+                        GameObject sat = Instantiate(satellitePrefab, Vector3.zero, Quaternion.identity);
+                        Satellite satScript = sat.GetComponent<Satellite>();
+                        if (satScript != null)
+                        {
+                            satScript.planetaAlvo = planetaAlvo;
+                        }
+                        
+                        // Esconde a mensagem imediatamente
+                        if (mensagemOrbita != null) mensagemOrbita.gameObject.SetActive(false);
+                    }
+                }
             }
         }
         else
