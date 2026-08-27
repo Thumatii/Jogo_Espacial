@@ -1,15 +1,19 @@
 using UnityEngine;
 using TMPro;
-using UnityEngine.UI; // Usamos o UI para controlar o Slider
+using UnityEngine.UI; // Necessário para Slider
 
 public class UIManager : MonoBehaviour
 {
     [Header("UI do Combustível")]
-    public Slider barraCombustivel; // Agora é um Slider, não uma Image
+    public Slider barraCombustivel;      
     public TextMeshProUGUI textoPercentual; 
 
+    [Header("UI da Aceleração (Novo!)")]
+    public Slider barraAceleracao; // Arraste a BarraAceleracao aqui
+    public TextMeshProUGUI textoAceleracao; // Arraste o texto que mostra o número
+
     [Header("Referência da Nave")]
-    public Nave nave;
+    public Nave nave; 
 
     void Start()
     {
@@ -18,17 +22,29 @@ public class UIManager : MonoBehaviour
 
     void Update()
     {
-        if (nave != null && barraCombustivel != null)
+        if (nave != null)
         {
-            // Calcula a porcentagem (0 a 100)
-            float porcentagem = nave.combustivel / 100f; 
-            
-            // No Slider, o valor máximo padrão é 1. Então passamos a porcentagem direto (ex: 0.75)
-            barraCombustivel.value = porcentagem;
+            // ===== COMBUSTÍVEL =====
+            if (barraCombustivel != null)
+            {
+                barraCombustivel.value = nave.combustivel / 100f;
+                if (textoPercentual != null)
+                    textoPercentual.text = Mathf.RoundToInt(nave.combustivel).ToString() + "%";
+            }
 
-            // Atualiza o texto com o número inteiro
-            if (textoPercentual != null)
-                textoPercentual.text = Mathf.RoundToInt(nave.combustivel).ToString() + "%";
+            // ===== ACELERAÇÃO (NOVO) =====
+            if (barraAceleracao != null)
+            {
+                // Calcula a porcentagem (0 a 100)
+                float porcentagemAceleracao = (nave.velocidadeAtual / nave.velocidadeMaxima) * 100f;
+
+                // Atualiza a barra
+                barraAceleracao.value = nave.velocidadeAtual / nave.velocidadeMaxima;
+
+                // Atualiza o texto (arredondado para número inteiro)
+                if (textoAceleracao != null)
+                    textoAceleracao.text = Mathf.RoundToInt(porcentagemAceleracao).ToString() + "%";
+            }
         }
     }
 }
