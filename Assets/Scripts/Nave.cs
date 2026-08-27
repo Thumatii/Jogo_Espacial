@@ -2,6 +2,7 @@ using UnityEngine;
 
 public class Nave : MonoBehaviour
 {
+    
     [Header("Configurações de Movimento")]
     public float velocidadeMaxima = 10f;    
     public float aceleracao = 15f;          
@@ -24,7 +25,7 @@ public class Nave : MonoBehaviour
     public float distanciaOrbita = 5f;      
     public float velocidadeOrbita = 20f;    
 
-    private float velocidadeAtual = 0f;
+    public float velocidadeAtual = 0f;
     private Rigidbody2D rb;
     private Vector2 direcaoMouse;
 
@@ -121,15 +122,24 @@ public class Nave : MonoBehaviour
     {
         if (emOrbita || emTransicao) return;
 
+        if (velocidadeAtual > 0.1f)
+        {
+            combustivel -= 0.05f * Time.fixedDeltaTime;
+        }
+
         if (Input.GetKey(KeyCode.W))
         {
             velocidadeAtual += aceleracao * Time.fixedDeltaTime;
+            
+            combustivel -= (aceleracao * 0.5f) * Time.fixedDeltaTime;
         }
         else if (Input.GetKey(KeyCode.S))
         {
             velocidadeAtual -= freio * Time.fixedDeltaTime;
         }
+
         velocidadeAtual = Mathf.Clamp(velocidadeAtual, 0f, velocidadeMaxima);
+        combustivel = Mathf.Clamp(combustivel, 0f, 100f);
 
         Vector2 forcaGravidadeTotal = Vector2.zero;
         Planet[] planetas = FindObjectsOfType<Planet>();
