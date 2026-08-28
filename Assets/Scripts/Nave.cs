@@ -124,7 +124,7 @@ public class Nave : MonoBehaviour
 
         if (velocidadeAtual > 0.1f)
         {
-            combustivel -= 0.05f * Time.fixedDeltaTime;
+            combustivel -= 0.00005f * Time.fixedDeltaTime;
         }
 
         if (Input.GetKey(KeyCode.W))
