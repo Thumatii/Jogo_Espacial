@@ -1,5 +1,6 @@
 using UnityEngine;
 using TMPro;
+using UnityEngine.SceneManagement;
 
 
 
@@ -39,6 +40,15 @@ public class GameController : MonoBehaviour
 
     void Start()
     {
+        if (DadosGlobais.jaEntrouNoEspaco)
+        {
+            
+            GameObject naveObj = GameObject.FindWithTag("Player"); // Ou arraste a referência pela barrinha lá
+            if (naveObj != null)
+            {
+                naveObj.transform.position = DadosGlobais.posicaoSalvaDaNave;
+            }
+        }
         // Estado inicial
         painelDecisaoPouso.SetActive(false);
         painelPouso.SetActive(false);
@@ -64,9 +74,20 @@ public class GameController : MonoBehaviour
                     break;
                 }
             }
+
+            if (Input.GetKeyDown(KeyCode.E))
+            {
+                GameObject naveObj = GameObject.FindWithTag("Player");
+                if (naveObj != null)
+                {
+                    DadosGlobais.posicaoSalvaDaNave = naveObj.transform.position;
+                    DadosGlobais.jaEntrouNoEspaco = true;
+                    SceneManager.LoadScene("InteriorNave");
+                }
+            }
         }
 
-                // NOVO: Lógica de órbita
+        // NOVO: Lógica de órbita
         if (estadoAtual == Estado.Mapa)
         {
             VerificarProximidadeOrbita();

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Nave : MonoBehaviour
 {
@@ -48,6 +49,16 @@ public class Nave : MonoBehaviour
 
     void Update()
     {
+        // Pressionar "E" para entrar
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            // Salva a posição exata onde a nave está no espaço
+            DadosGlobais.posicaoSalvaDaNave = transform.position;
+            DadosGlobais.jaEntrouNoEspaco = true;
+
+            // Carrega a cena do interior 
+            SceneManager.LoadScene("InteriorNave");
+        }
         // ===== BLOCO DE ÓRBITA =====
         if (emOrbita)
         {
