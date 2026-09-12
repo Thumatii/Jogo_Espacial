@@ -1,4 +1,3 @@
-
 using UnityEngine;
 
 public class MovimentosPlayer : MonoBehaviour
@@ -15,20 +14,30 @@ public class MovimentosPlayer : MonoBehaviour
 
     void Update()
     {
-        movimento.x = Input.GetAxisRaw("Horizontal");
-        movimento.y = Input.GetAxisRaw("Vertical");
-        movimento = movimento.normalized;
+        float moveX = Input.GetAxisRaw("Horizontal");
+        float moveY = Input.GetAxisRaw("Vertical");
 
-        // teste, vtnc
-        if (movimento != Vector2.zero)
+        // Calcula a direção usando Vector3 para evitar o erro de eixo Z
+        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+        Vector2 direcaoMouse = (mousePos - transform.position);
+
+        if (direcaoMouse.sqrMagnitude > 0.001f)
         {
-            Debug.Log("Movimento detectado: " + movimento);
+            direcaoMouse.Normalize();
         }
+        else
+        {
+            direcaoMouse = Vector2.up;
+        }
+
+        Vector2 direcaoFrente = direcaoMouse;
+        Vector2 direcaoDireita = new Vector2(direcaoFrente.y, -direcaoFrente.x);
+
+        movimento = (direcaoFrente * moveY + direcaoDireita * moveX).normalized;
     }
 
     void FixedUpdate()
     {
-        
         rb.linearVelocity = movimento * velocidade;
     }
 }
