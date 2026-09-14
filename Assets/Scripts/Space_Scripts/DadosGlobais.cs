@@ -1,12 +1,80 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public static class DadosGlobais
 {
-    // Dados da Nave
-    public static Vector3 posicaoSalvaDaNave = Vector3.zero;
+    // Memória da sessão no Espaço
     public static bool jaEntrouNoEspaco = false;
+    public static Vector3 posicaoSalvaDaNave;
+    public static Vector2 velocidadeVetorSalva;
+    public static float velocidadeAtualSalva;
+    public static float tempoSaida;
 
-    // Espaço preparado para o futuro:
-    // public static int dinheiro = 0;
-    // public static List<MovelDados> moveisInstalados;
+    // Órbita
+    public static bool estaEmOrbita = false;
+    public static string nomePlanetaOrbitado = "";
+    public static float anguloOrbitaSalvo = 0f;
+
+    // Memória da cena Interior
+    public static Vector3 posicaoJogadorInterior;
+    public static bool temPosicaoInteriorSalva = false;
+
+    // Flag de controle para tempo congelado ao fechar/abrir o jogo
+    public static bool carregouDoQuit = false;
+
+    // ===== SALVAR NO DISCO (PLAYERPREFS) =====
+    public static void SalvarNoDisco()
+    {
+        PlayerPrefs.SetString("CenaSalva", SceneManager.GetActiveScene().name);
+
+        // Dados da Nave (Espaço)
+        PlayerPrefs.SetFloat("NavePosX", posicaoSalvaDaNave.x);
+        PlayerPrefs.SetFloat("NavePosY", posicaoSalvaDaNave.y);
+        PlayerPrefs.SetFloat("NavePosZ", posicaoSalvaDaNave.z);
+        PlayerPrefs.SetInt("EstaEmOrbita", estaEmOrbita ? 1 : 0);
+        PlayerPrefs.SetString("NomePlanetaOrbitado", nomePlanetaOrbitado);
+        PlayerPrefs.SetFloat("AnguloOrbita", anguloOrbitaSalvo);
+
+        // Dados do Jogador (Interior)
+        PlayerPrefs.SetFloat("JogadorIntX", posicaoJogadorInterior.x);
+        PlayerPrefs.SetFloat("JogadorIntY", posicaoJogadorInterior.y);
+        PlayerPrefs.SetFloat("JogadorIntZ", posicaoJogadorInterior.z);
+        PlayerPrefs.SetInt("TemPosicaoInterior", temPosicaoInteriorSalva ? 1 : 0);
+
+        PlayerPrefs.SetInt("TemSave", 1);
+        PlayerPrefs.Save();
+    }
+
+    // ===== CARREGAR DO DISCO =====
+    public static bool CarregarDoDisco()
+    {
+        if (PlayerPrefs.GetInt("TemSave", 0) == 0) return false;
+
+        // Carrega posição da Nave
+        posicaoSalvaDaNave = new Vector3(
+            PlayerPrefs.GetFloat("NavePosX"),
+            PlayerPrefs.GetFloat("NavePosY"),
+            PlayerPrefs.GetFloat("NavePosZ")
+        );
+
+        velocidadeVetorSalva = Vector2.zero;
+        velocidadeAtualSalva = 0f;
+
+        estaEmOrbita = PlayerPrefs.GetInt("EstaEmOrbita") == 1;
+        nomePlanetaOrbitado = PlayerPrefs.GetString("NomePlanetaOrbitado", "");
+        anguloOrbitaSalvo = PlayerPrefs.GetFloat("AnguloOrbita", 0f);
+
+        // Carrega posição do Jogador no Interior
+        posicaoJogadorInterior = new Vector3(
+            PlayerPrefs.GetFloat("JogadorIntX"),
+            PlayerPrefs.GetFloat("JogadorIntY"),
+            PlayerPrefs.GetFloat("JogadorIntZ")
+        );
+        temPosicaoInteriorSalva = PlayerPrefs.GetInt("TemPosicaoInterior", 0) == 1;
+
+        jaEntrouNoEspaco = true;
+        carregouDoQuit = true;
+
+        return true;
+    }
 }

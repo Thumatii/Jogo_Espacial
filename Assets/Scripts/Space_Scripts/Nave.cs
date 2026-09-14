@@ -3,28 +3,27 @@ using UnityEngine.SceneManagement;
 
 public class Nave : MonoBehaviour
 {
-    
     [Header("Configurações de Movimento")]
-    public float velocidadeMaxima = 10f;    
-    public float aceleracao = 15f;          
-    public float freio = 25f;               
-    public float velocidadeRotacao = 10f;   // Usada para suavizar o controle normal
+    public float velocidadeMaxima = 10f;
+    public float aceleracao = 15f;
+    public float freio = 25f;
+    public float velocidadeRotacao = 10f;
 
     [Header("Gravidade (calculada manualmente)")]
-    public float constanteGravitacional = 20f; 
+    public float constanteGravitacional = 20f;
     public float distanciaMinima = 0.5f;
 
     [Header("Status da Nave")]
-    public float combustivel = 100f;        
-    public float vida = 100f;               
+    public float combustivel = 100f;
+    public float vida = 100f;
 
     [Header("Sprites da Nave (40 frames)")]
     public SpriteRenderer spriteRenderer;
-    public Sprite[] spritesNave; 
+    public Sprite[] spritesNave;
 
     [Header("Órbita")]
-    public float distanciaOrbita = 5f;      
-    public float velocidadeOrbita = 20f;    
+    public float distanciaOrbita = 5f;
+    public float velocidadeOrbita = 20f;
 
     public float velocidadeAtual = 0f;
     private Rigidbody2D rb;
@@ -34,32 +33,74 @@ public class Nave : MonoBehaviour
     private Planet planetaOrbitando;
     private float anguloOrbita = 0f;
 
-    // Variáveis do deslize
     private bool emTransicao = false;
     private Vector3 posicaoInicial;
     private Vector3 posicaoAlvo;
     private float progressoTransicao = 0f;
-    private float tempoTransicao = 1.5f; 
+    private float tempoTransicao = 1.5f;
+
+    private float anguloSpriteAtual = 0f;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
-        rb.gravityScale = 0f; 
+        rb.gravityScale = 0f;
+
+        if (DadosGlobais.jaEntrouNoEspaco)
+        {
+            // Se veio de um Quit, ignora a contagem de tempo (tempo congelado)
+            float tempoDecorrido = DadosGlobais.carregouDoQuit ? 0f : (Time.time - DadosGlobais.tempoSaida);
+
+            if (DadosGlobais.estaEmOrbita)
+            {
+                GameObject objPlaneta = GameObject.Find(DadosGlobais.nomePlanetaOrbitado);
+
+                if (objPlaneta != null)
+                {
+                    planetaOrbitando = objPlaneta.GetComponent<Planet>();
+                    emOrbita = true;
+
+                    anguloOrbita = DadosGlobais.carregouDoQuit
+                        ? DadosGlobais.anguloOrbitaSalvo
+                        : DadosGlobais.anguloOrbitaSalvo + (velocidadeOrbita * tempoDecorrido);
+
+                    float raioOrbita = planetaOrbitando.raio + distanciaOrbita;
+                    Vector2 pos = (Vector2)planetaOrbitando.transform.position +
+                        new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * raioOrbita;
+
+                    transform.position = new Vector3(pos.x, pos.y, 0f);
+                    rb.linearVelocity = Vector2.zero;
+
+                    OrbitaVisual orbitaVisual = planetaOrbitando.GetComponentInChildren<OrbitaVisual>();
+                    if (orbitaVisual != null) orbitaVisual.Ativar(distanciaOrbita);
+                }
+            }
+            else
+            {
+                Vector3 deslocamentoEmInercia = (Vector3)(DadosGlobais.velocidadeVetorSalva * tempoDecorrido);
+                transform.position = DadosGlobais.posicaoSalvaDaNave + deslocamentoEmInercia;
+
+                rb.linearVelocity = DadosGlobais.velocidadeVetorSalva;
+                velocidadeAtual = DadosGlobais.velocidadeAtualSalva;
+            }
+
+            DadosGlobais.carregouDoQuit = false;
+        }
     }
 
     void Update()
     {
-        // Pressionar "E" para entrar
+        // ATUALIZAÇÃO CONTÍNUA: Garante que o Carregador da UI tenha os dados certos
+        DadosGlobais.posicaoSalvaDaNave = transform.position;
+        DadosGlobais.velocidadeAtualSalva = velocidadeAtual;
+        if (rb != null) DadosGlobais.velocidadeVetorSalva = rb.linearVelocity;
+
         if (Input.GetKeyDown(KeyCode.E))
         {
-            // Salva a posição exata onde a nave está no espaço
-            DadosGlobais.posicaoSalvaDaNave = transform.position;
-            DadosGlobais.jaEntrouNoEspaco = true;
-
-            // Carrega a cena do interior 
+            SalvarEstadoDaNave();
             SceneManager.LoadScene("InteriorNave");
         }
-        // ===== BLOCO DE ÓRBITA =====
+
         if (emOrbita)
         {
             if (emTransicao)
@@ -71,8 +112,7 @@ public class Nave : MonoBehaviour
                     emTransicao = false;
                 }
                 transform.position = Vector3.Lerp(posicaoInicial, posicaoAlvo, progressoTransicao);
-                
-                // Durante o deslize, use a direção do movimento (sem suavizar para não travar)
+
                 Vector2 direcaoDeslize = (posicaoAlvo - posicaoInicial).normalized;
                 if (direcaoDeslize.sqrMagnitude > 0.01f)
                 {
@@ -82,23 +122,16 @@ public class Nave : MonoBehaviour
                 return;
             }
 
-            // Depois do deslize, órbita normal
             anguloOrbita += velocidadeOrbita * Time.deltaTime;
             Vector2 pos = (Vector2)planetaOrbitando.transform.position + new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * (planetaOrbitando.raio + distanciaOrbita);
             transform.position = pos;
 
-            // ===== TROCA DE SPRITE ESTÁVEL USANDO A TANGENTE =====
-            // O ângulo da tangente é sempre +90° (ou -90°) em relação ao raio.
-            // Isso é matemática pura, não depende de posição anterior, então é 100% estável.
-            float anguloTangente = anguloOrbita + 90f; // Ajuste o sinal se a órbita for ao contrário
+            float anguloTangente = anguloOrbita + 90f;
             TrocarSpritePeloAngulo(anguloTangente);
-            // ====================================================
 
             return;
         }
-        // ===== FIM DO BLOCO DE ÓRBITA =====
 
-        // ===== CONTROLE NORMAL =====
         Vector3 posicaoMouse = Camera.main.ScreenToWorldPoint(Input.mousePosition);
         posicaoMouse.z = 0f;
         direcaoMouse = (posicaoMouse - transform.position).normalized;
@@ -106,24 +139,16 @@ public class Nave : MonoBehaviour
         if (direcaoMouse.sqrMagnitude > 0.01f)
         {
             float angulo = Mathf.Atan2(direcaoMouse.y, direcaoMouse.x) * Mathf.Rad2Deg;
-            // Usamos suavização apenas no controle normal (fora da órbita)
             anguloSpriteAtual = Mathf.LerpAngle(anguloSpriteAtual, angulo, Time.deltaTime * velocidadeRotacao);
             TrocarSpritePeloAngulo(anguloSpriteAtual);
         }
     }
 
-    // Variável para suavizar o controle normal
-    private float anguloSpriteAtual = 0f;
-
     void TrocarSpritePeloAngulo(float angulo)
     {
         if (spritesNave == null || spritesNave.Length == 0) return;
 
-        // Pega o angulo
         float anguloNormalizado = Mathf.Repeat(angulo + 90f, 360f);
-
-        // Calcula o "índice" e usamos o .Length em vez do 40, nn entendi pq 40
-        // se você adicionar ou remover sprites no Inspector toma cuidado
         int indice = Mathf.FloorToInt(anguloNormalizado / 9f) % spritesNave.Length;
 
         spriteRenderer.sprite = spritesNave[indice];
@@ -141,7 +166,6 @@ public class Nave : MonoBehaviour
         if (Input.GetKey(KeyCode.W))
         {
             velocidadeAtual += aceleracao * Time.fixedDeltaTime;
-            
             combustivel -= (aceleracao * 0.5f) * Time.fixedDeltaTime;
         }
         else if (Input.GetKey(KeyCode.S))
@@ -159,7 +183,7 @@ public class Nave : MonoBehaviour
         {
             Vector2 direcaoPlaneta = ((Vector2)planeta.transform.position - rb.position).normalized;
             float distancia = Vector2.Distance(rb.position, planeta.transform.position);
-            
+
             if (distancia > 0.01f)
             {
                 float forca = constanteGravitacional * planeta.massa / (distancia * distancia);
@@ -169,6 +193,24 @@ public class Nave : MonoBehaviour
 
         Vector2 velocidadeFrente = direcaoMouse * velocidadeAtual;
         rb.linearVelocity = velocidadeFrente + forcaGravidadeTotal;
+    }
+
+    private void SalvarEstadoDaNave()
+    {
+        DadosGlobais.posicaoSalvaDaNave = transform.position;
+        DadosGlobais.velocidadeVetorSalva = rb.linearVelocity;
+        DadosGlobais.velocidadeAtualSalva = velocidadeAtual;
+        DadosGlobais.tempoSaida = Time.time;
+        DadosGlobais.jaEntrouNoEspaco = true;
+
+        DadosGlobais.estaEmOrbita = emOrbita;
+        if (emOrbita && planetaOrbitando != null)
+        {
+            DadosGlobais.nomePlanetaOrbitado = planetaOrbitando.gameObject.name;
+            DadosGlobais.anguloOrbitaSalvo = anguloOrbita;
+        }
+
+        DadosGlobais.SalvarNoDisco();
     }
 
     public void IniciarOrbita(Planet planeta)
@@ -203,6 +245,8 @@ public class Nave : MonoBehaviour
         planetaOrbitando = null;
         rb.linearVelocity = Vector2.zero;
 
+        DadosGlobais.estaEmOrbita = false;
+
         if (planetaSaindo != null)
         {
             OrbitaVisual orbitaVisual = planetaSaindo.GetComponentInChildren<OrbitaVisual>();
@@ -217,5 +261,10 @@ public class Nave : MonoBehaviour
         rb.linearVelocity = Vector2.zero;
         velocidadeAtual = 0f;
         transform.position = posicao;
+    }
+
+    void OnApplicationQuit()
+    {
+        SalvarEstadoDaNave();
     }
 }

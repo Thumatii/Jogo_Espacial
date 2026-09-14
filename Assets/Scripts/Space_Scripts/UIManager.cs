@@ -1,3 +1,4 @@
+
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI; // Necessário para Slider
@@ -8,13 +9,16 @@ public class UIManager : MonoBehaviour
     public Slider barraCombustivel;
     public TextMeshProUGUI textoPercentual;
 
-    [Header("UI da Aceleração (Novo!)")]
-    public Slider barraAceleracao; // Arraste a BarraAceleracao aqui
-    public TextMeshProUGUI textoAceleracao; // Arraste o texto que mostra o número
+    [Header("UI da Aceleração")]
+    public Slider barraAceleracao;
+    public TextMeshProUGUI textoAceleracao;
 
     [Header("UI do Nome da Nave")]
     public TMP_InputField inputNomeNave;
     public TextMeshProUGUI textoNomeNave;
+
+    [Header("UI de Coordenadas (Novo!)")]
+    public TextMeshProUGUI textoCoordenadas; // Arraste o texto das coordenadas aqui
 
     [Header("Referência da Nave")]
     public Nave nave;
@@ -25,7 +29,7 @@ public class UIManager : MonoBehaviour
     {
         if (nave == null) nave = FindObjectOfType<Nave>();
 
-        // Carrega o nome salvo dos arquivos internos
+        // Carrega o nome
         string nomeSalvo = PlayerPrefs.GetString("NomeDaNave", "FENG-01");
 
         if (textoNomeNave != null)
@@ -50,22 +54,26 @@ public class UIManager : MonoBehaviour
                     textoPercentual.text = Mathf.RoundToInt(nave.combustivel).ToString() + "m³";
             }
 
-            // ===== ACELERAÇÃO (NOVO) =====
+            // ===== ACELERAÇÃO =====
             if (barraAceleracao != null)
             {
-                // Calcula a porcentagem (0 a 100)
                 float porcentagemAceleracao = (nave.velocidadeAtual / nave.velocidadeMaxima) * 100f;
-
-                // Atualiza a barra
                 barraAceleracao.value = nave.velocidadeAtual / nave.velocidadeMaxima;
 
-                // Atualiza o texto (arredondado para número inteiro)
                 if (textoAceleracao != null)
                     textoAceleracao.text = Mathf.RoundToInt(porcentagemAceleracao).ToString() + "km/h²";
             }
+
+            // Coordenadas legais
+            if (textoCoordenadas != null)
+            {
+                Vector3 pos = nave.transform.position;
+                // (use :F1 para 1 casa decimal ou remova para número inteiro)
+                textoCoordenadas.text = $"X: {pos.x:F1} | Y: {pos.y:F1}";
+            }
         }
 
-        // Salvamento do nome da nave (nao nos arquivos do jogo), AIND
+        // Salvamento do nome da nave
         if (inputNomeNave != null && inputNomeNave.text != ultimoTextoDigitado)
         {
             ultimoTextoDigitado = inputNomeNave.text;

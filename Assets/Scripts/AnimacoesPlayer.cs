@@ -13,24 +13,34 @@ public class AnimacaoPlayer : MonoBehaviour
 
     void Update()
     {
-        
+        // Pega o input do teclado
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveY = Input.GetAxisRaw("Vertical");
-        bool correndo = (moveX != 0 || moveY != 0);
+        Vector2 movimento = new Vector2(moveX, moveY).normalized;
 
-        
-        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        Vector2 direcaoMouse = (mousePos - transform.position).normalized;
+        bool correndo = movimento != Vector2.zero;
+        float angulo;
 
-        float angulo = Mathf.Atan2(direcaoMouse.y, direcaoMouse.x) * Mathf.Rad2Deg;
+        if (correndo)
+        {
+            // Se andando, olha para a direção do WASD
+            angulo = Mathf.Atan2(movimento.y, movimento.x) * Mathf.Rad2Deg;
+        }
+        else
+        {
+            // Se parado, olha para a direção do Mouse
+            Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
+            Vector2 direcaoMouse = (mousePos - transform.position).normalized;
+            angulo = Mathf.Atan2(direcaoMouse.y, direcaoMouse.x) * Mathf.Rad2Deg;
+        }
+
+        // Converte ângulo negativo para 0-360 e calcula o setor (0 a 7)
         if (angulo < 0) angulo += 360f;
-
         int setor = Mathf.FloorToInt((angulo + 22.5f) / 45f) % 8;
 
-        // Prefixo do movimento
         string nomeAnimacao = correndo ? "Walking_" : "Idle_";
 
-        
+        // Toca a animação correspondente
         switch (setor)
         {
             case 0: // Direita
@@ -57,7 +67,7 @@ public class AnimacaoPlayer : MonoBehaviour
                 anim.Play(nomeAnimacao + "DiagFrente");
                 sr.flipX = true;
                 break;
-            case 6: // frente
+            case 6: // Frente
                 anim.Play(nomeAnimacao + "Frente");
                 sr.flipX = false;
                 break;

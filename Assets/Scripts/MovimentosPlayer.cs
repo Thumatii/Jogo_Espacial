@@ -16,28 +16,12 @@ public class MovimentosPlayer : MonoBehaviour
     {
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveY = Input.GetAxisRaw("Vertical");
-
-        // Calcula a direção usando Vector3 para evitar o erro de eixo Z
-        Vector3 mousePos = Camera.main.ScreenToWorldPoint(Input.mousePosition);
-        Vector2 direcaoMouse = (mousePos - transform.position);
-
-        if (direcaoMouse.sqrMagnitude > 0.001f)
-        {
-            direcaoMouse.Normalize();
-        }
-        else
-        {
-            direcaoMouse = Vector2.up;
-        }
-
-        Vector2 direcaoFrente = direcaoMouse;
-        Vector2 direcaoDireita = new Vector2(direcaoFrente.y, -direcaoFrente.x);
-
-        movimento = (direcaoFrente * moveY + direcaoDireita * moveX).normalized;
+        movimento = new Vector2(moveX, moveY).normalized;
     }
 
     void FixedUpdate()
     {
+        
         rb.linearVelocity = movimento * velocidade;
     }
 }
