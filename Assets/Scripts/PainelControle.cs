@@ -20,7 +20,9 @@ public class PainelControle : MonoBehaviour
 
     void Update()
     {
-        if (jogadorNaArea && Input.GetKeyDown(KeyCode.E))
+        bool consoleAberto = DebugConsole.Instancia != null && DebugConsole.Instancia.ConsoleEstaAberto;
+
+        if (!consoleAberto && jogadorNaArea && Input.GetKeyDown(KeyCode.E))
         {
             SceneManager.LoadScene(nomeCenaEspaco);
         }

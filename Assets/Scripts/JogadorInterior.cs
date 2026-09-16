@@ -18,8 +18,9 @@ public class JogadorInterior : MonoBehaviour
         DadosGlobais.posicaoJogadorInterior = transform.position;
         DadosGlobais.temPosicaoInteriorSalva = true;
 
+        bool consoleAberto = DebugConsole.Instancia != null && DebugConsole.Instancia.ConsoleEstaAberto;
 
-        if (Input.GetKeyDown(KeyCode.E) && pertoDoPainel)
+        if (!consoleAberto && Input.GetKeyDown(KeyCode.E) && pertoDoPainel)
         {
             SalvarEstado();
             SceneManager.LoadScene("Space");

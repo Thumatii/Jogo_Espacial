@@ -95,7 +95,9 @@ public class Nave : MonoBehaviour
         DadosGlobais.velocidadeAtualSalva = velocidadeAtual;
         if (rb != null) DadosGlobais.velocidadeVetorSalva = rb.linearVelocity;
 
-        if (Input.GetKeyDown(KeyCode.E))
+        bool consoleAberto = DebugConsole.Instancia != null && DebugConsole.Instancia.ConsoleEstaAberto;
+
+        if (!consoleAberto && Input.GetKeyDown(KeyCode.E))
         {
             SalvarEstadoDaNave();
             SceneManager.LoadScene("InteriorNave");

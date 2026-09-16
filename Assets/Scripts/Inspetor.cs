@@ -122,4 +122,14 @@ public class Inspetor : MonoBehaviour
                 textoTooltip.text = $"<b>{nomeReal}</b>\n<size=80%>{descricaoReal}</size>";
         }
     }
+
+    // Usado pelo comando "wipe_inspector" do Debug Console: volta este
+    // objeto ao estado "não inspecionado", sem precisar recarregar a cena.
+    public void ResetInspecao()
+    {
+        jaFoiInspecionado = false;
+
+        if (textoTooltip != null)
+            AtualizarTextoUI();
+    }
 }

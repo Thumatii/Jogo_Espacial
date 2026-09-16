@@ -60,6 +60,10 @@ public class GameController : MonoBehaviour
     {
         if (nave == null) return;
 
+        // Enquanto o Debug Console está aberto, ignora todos os atalhos desta tela
+        // (E, O, F, Tab) pra não conflitar com o que está sendo digitado nele.
+        if (DebugConsole.Instancia != null && DebugConsole.Instancia.ConsoleEstaAberto) return;
+
         if (estadoAtual == Estado.Mapa)
         {
             VerificarProximidadePlanetas();
