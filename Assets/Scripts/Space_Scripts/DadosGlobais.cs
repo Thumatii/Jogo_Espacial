@@ -77,4 +77,43 @@ public static class DadosGlobais
 
         return true;
     }
+
+    // ===== OBJETOS INSPECIONADOS (descobertos) =====
+    private const string PrefixoInspecionado = "Inspecionado_";
+
+    public static bool ObjetoJaFoiInspecionado(string idUnico)
+    {
+        if (string.IsNullOrEmpty(idUnico)) return false;
+        return PlayerPrefs.GetInt(PrefixoInspecionado + idUnico, 0) == 1;
+    }
+
+    public static void MarcarObjetoInspecionado(string idUnico)
+    {
+        if (string.IsNullOrEmpty(idUnico)) return;
+        PlayerPrefs.SetInt(PrefixoInspecionado + idUnico, 1);
+        PlayerPrefs.Save();
+    }
+
+    public static void DesmarcarObjetoInspecionado(string idUnico)
+    {
+        if (string.IsNullOrEmpty(idUnico)) return;
+        PlayerPrefs.DeleteKey(PrefixoInspecionado + idUnico);
+        PlayerPrefs.Save();
+    }
+
+    // ===== APARÊNCIA ESCOLHIDA (troca de sprite) =====
+    private const string PrefixoAparencia = "Aparencia_";
+
+    public static int CarregarAparenciaEscolhida(string idUnico, int padrao)
+    {
+        if (string.IsNullOrEmpty(idUnico)) return padrao;
+        return PlayerPrefs.GetInt(PrefixoAparencia + idUnico, padrao);
+    }
+
+    public static void SalvarAparenciaEscolhida(string idUnico, int indice)
+    {
+        if (string.IsNullOrEmpty(idUnico)) return;
+        PlayerPrefs.SetInt(PrefixoAparencia + idUnico, indice);
+        PlayerPrefs.Save();
+    }
 }
