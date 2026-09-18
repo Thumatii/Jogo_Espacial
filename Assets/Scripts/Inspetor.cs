@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using TMPro;
 
@@ -18,9 +19,17 @@ public class Inspetor : MonoBehaviour
     public GameObject prefabMolduraUI;
     public RectTransform canvasRect;
 
+    [Header("Efeito de Vida na Moldura")]
+    public float amplitudePulso = 0.04f;   // variação de escala (0.04 = 4%)
+    public float velocidadePulso = 2f;     // velocidade da "respiração"
+    public float amplitudeRotacao = 1.5f;  // graus de balanço leve
+
     [Header("UI de Texto (Tooltip à Direita)")]
     public TextMeshProUGUI textoTooltip;
     public Vector2 offsetTexto = new Vector2(30f, 0f); // X = Distância para a direita | Y = Ajuste de altura
+
+    [Header("Typewriter (texto revelado no clique)")]
+    public float velocidadeTypewriter = 35f; // caracteres por segundo
 
     private GameObject molduraInstanciada;
     private RectTransform rectMoldura;
@@ -29,6 +38,8 @@ public class Inspetor : MonoBehaviour
     private bool jaFoiInspecionado = false;
     private Collider2D colisor;
     private Camera cam;
+
+    private Coroutine coroutineTypewriter;
 
     void Start()
     {
@@ -76,14 +87,22 @@ public class Inspetor : MonoBehaviour
                 rectMoldura.localPosition = localPoint;
 
                 rectMoldura.sizeDelta = new Vector2((larguraTela + 40f) / scaleFactor, (alturaTela + 40f) / scaleFactor);
+
+                // efeito moldura
+                float pulso = 1f + Mathf.Sin(Time.time * velocidadePulso) * amplitudePulso;
+                rectMoldura.localScale = new Vector3(pulso, pulso, 1f);
+                rectMoldura.localEulerAngles = new Vector3(0f, 0f, Mathf.Sin(Time.time * velocidadePulso * 0.6f) * amplitudeRotacao);
             }
 
             if (textoTooltip != null)
             {
                 textoTooltip.gameObject.SetActive(true);
-                AtualizarTextoUI();
 
-                // Posiciona o texto à direita da moldura (metade da largura da moldura + o offset X)
+              
+                if (!jaFoiInspecionado)
+                    AtualizarTextoUI();
+
+                
                 float larguraMolduraPixels = larguraTela + 40f;
                 Vector3 posicaoDireita = screenPoint + new Vector3((larguraMolduraPixels / 2f) + offsetTexto.x, offsetTexto.y, 0);
 
@@ -92,10 +111,10 @@ public class Inspetor : MonoBehaviour
                 textoTooltip.rectTransform.localPosition = localPointText;
             }
 
-            if (Input.GetMouseButtonDown(0))
+            if (Input.GetMouseButtonDown(0) && !jaFoiInspecionado)
             {
                 jaFoiInspecionado = true;
-                AtualizarTextoUI();
+                IniciarTypewriter();
             }
         }
         else
@@ -109,6 +128,8 @@ public class Inspetor : MonoBehaviour
             {
                 textoTooltip.gameObject.SetActive(false);
             }
+
+            PararTypewriter();
         }
     }
 
@@ -117,17 +138,64 @@ public class Inspetor : MonoBehaviour
         if (textoTooltip != null)
         {
             if (!jaFoiInspecionado)
+            {
                 textoTooltip.text = $"[ ? ] {nomeObjeto}\n<size=80%>{descricaoObjeto}</size>\n<i>Clique para Inspecionar</i>";
+                textoTooltip.maxVisibleCharacters = int.MaxValue; // garante texto padrão sempre visível por completo
+            }
             else
+            {
                 textoTooltip.text = $"<b>{nomeReal}</b>\n<size=80%>{descricaoReal}</size>";
+            }
         }
     }
 
-    // Usado pelo comando "wipe_inspector" do Debug Console: volta este
-    // objeto ao estado "não inspecionado", sem precisar recarregar a cena.
+    void IniciarTypewriter()
+    {
+        if (textoTooltip == null) return;
+
+        PararTypewriter();
+        coroutineTypewriter = StartCoroutine(TypewriterCoroutine());
+    }
+
+    void PararTypewriter()
+    {
+        if (coroutineTypewriter != null)
+        {
+            StopCoroutine(coroutineTypewriter);
+            coroutineTypewriter = null;
+        }
+    }
+
+    IEnumerator TypewriterCoroutine()
+    {
+        string textoCompleto = $"<b>{nomeReal}</b>\n<size=80%>{descricaoReal}</size>";
+        textoTooltip.text = textoCompleto;
+        textoTooltip.ForceMeshUpdate();
+
+        int totalCaracteresVisiveis = textoTooltip.textInfo.characterCount;
+        textoTooltip.maxVisibleCharacters = 0;
+
+        float intervalo = 1f / Mathf.Max(velocidadeTypewriter, 1f);
+
+        for (int i = 0; i <= totalCaracteresVisiveis; i++)
+        {
+            textoTooltip.maxVisibleCharacters = i;
+            yield return new WaitForSeconds(intervalo);
+        }
+
+        coroutineTypewriter = null;
+    }
+
+    void OnDisable()
+    {
+        PararTypewriter();
+    }
+
+    // Usado pelo comando wipe_inspector
     public void ResetInspecao()
     {
         jaFoiInspecionado = false;
+        PararTypewriter();
 
         if (textoTooltip != null)
             AtualizarTextoUI();
