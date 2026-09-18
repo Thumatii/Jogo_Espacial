@@ -52,4 +52,8 @@ public class TrocaAparencia : MonoBehaviour
     {
         return inspetor != null ? inspetor.idUnico : gameObject.name;
     }
+
+    public Sprite SpriteAtual => (opcoes != null && opcoes.Length > 0) ? opcoes[indiceAtual] : null;
+    public Sprite SpriteProximo => (opcoes != null && opcoes.Length > 0) ? opcoes[(indiceAtual + 1) % opcoes.Length] : null;
+    public Sprite SpriteAnterior => (opcoes != null && opcoes.Length > 0) ? opcoes[(indiceAtual - 1 + opcoes.Length) % opcoes.Length] : null;
 }

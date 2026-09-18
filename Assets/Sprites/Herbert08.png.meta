@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 7260e37847b5dcd42a979eedea8eca64
+guid: e0f452104c645de458cb8b5aaa6d4a39
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6387949140538278722
-    second: UI_Option_0
+      213: 4743920063845513998
+    second: Herbert08_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -100,13 +100,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: UI_Option_0
+      name: Herbert08_0
       rect:
         serializedVersion: 2
         x: 0
         y: 0
-        width: 14
-        height: 16
+        width: 12
+        height: 17
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -115,8 +115,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: ebc34faf9127957a0800000000000000
-      internalID: -6387949140538278722
+      spriteID: e0b3c58e92ac5d140800000000000000
+      internalID: 4743920063845513998
       vertices: []
       indices: 
       edges: []
@@ -135,7 +135,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      UI_Option_0: -6387949140538278722
+      Herbert08_0: 4743920063845513998
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

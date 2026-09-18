@@ -19,8 +19,9 @@ public class JogadorInterior : MonoBehaviour
         DadosGlobais.temPosicaoInteriorSalva = true;
 
         bool consoleAberto = DebugConsole.Instancia != null && DebugConsole.Instancia.ConsoleEstaAberto;
+        bool aparenciaAberta = GerenciadorInspetor.Instancia != null && GerenciadorInspetor.Instancia.ModoAparenciaAberto;
 
-        if (!consoleAberto && Input.GetKeyDown(KeyCode.E) && pertoDoPainel)
+        if (!consoleAberto && !aparenciaAberta && Input.GetKeyDown(KeyCode.E) && pertoDoPainel)
         {
             SalvarEstado();
             SceneManager.LoadScene("Space");

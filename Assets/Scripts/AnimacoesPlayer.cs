@@ -13,9 +13,11 @@ public class AnimacaoPlayer : MonoBehaviour
 
     void Update()
     {
+        bool travado = GerenciadorInspetor.Instancia != null && GerenciadorInspetor.Instancia.ModoAparenciaAberto;
+
         // Pega o input do teclado
-        float moveX = Input.GetAxisRaw("Horizontal");
-        float moveY = Input.GetAxisRaw("Vertical");
+        float moveX = travado ? 0f : Input.GetAxisRaw("Horizontal");
+        float moveY = travado ? 0f : Input.GetAxisRaw("Vertical");
         Vector2 movimento = new Vector2(moveX, moveY).normalized;
 
         bool correndo = movimento != Vector2.zero;

@@ -14,6 +14,14 @@ public class MovimentosPlayer : MonoBehaviour
 
     void Update()
     {
+        bool travado = GerenciadorInspetor.Instancia != null && GerenciadorInspetor.Instancia.ModoAparenciaAberto;
+
+        if (travado)
+        {
+            movimento = Vector2.zero;
+            return;
+        }
+
         float moveX = Input.GetAxisRaw("Horizontal");
         float moveY = Input.GetAxisRaw("Vertical");
         movimento = new Vector2(moveX, moveY).normalized;
@@ -21,7 +29,6 @@ public class MovimentosPlayer : MonoBehaviour
 
     void FixedUpdate()
     {
-        
         rb.linearVelocity = movimento * velocidade;
     }
 }

@@ -20,11 +20,13 @@ public class Inspetor : MonoBehaviour
     [HideInInspector] public bool jaFoiInspecionado = false;
 
     public Collider2D Colisor { get; private set; }
+    public SpriteRenderer Renderizador { get; private set; }
     public Transform Alvo => alvoParaSeguir != null ? alvoParaSeguir : transform;
 
     void Awake()
     {
         Colisor = GetComponent<Collider2D>();
+        Renderizador = GetComponent<SpriteRenderer>();
 
         if (string.IsNullOrEmpty(idUnico))
             idUnico = gameObject.name;
