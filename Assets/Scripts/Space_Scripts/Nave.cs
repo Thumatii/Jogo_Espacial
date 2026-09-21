@@ -28,6 +28,7 @@ public class Nave : MonoBehaviour
     public float velocidadeAtual = 0f;
     private Rigidbody2D rb;
     private Vector2 direcaoMouse;
+    private Planet[] planetasCache;
 
     private bool emOrbita = false;
     private Planet planetaOrbitando;
@@ -45,6 +46,10 @@ public class Nave : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         rb.gravityScale = 0f;
+
+        // Planetas não mudam em runtime — busca uma vez só aqui em vez de
+        // escanear a cena inteira toda FixedUpdate (rodava ~50x por segundo à toa).
+        planetasCache = FindObjectsByType<Planet>(FindObjectsSortMode.None);
 
         if (DadosGlobais.jaEntrouNoEspaco)
         {
@@ -73,6 +78,14 @@ public class Nave : MonoBehaviour
 
                     OrbitaVisual orbitaVisual = planetaOrbitando.GetComponentInChildren<OrbitaVisual>();
                     if (orbitaVisual != null) orbitaVisual.Ativar(distanciaOrbita);
+                }
+                else
+                {
+                    // Planeta salvo não existe mais nessa cena (nome mudou, foi removido, etc).
+                    // Sem isso a nave ficava largada onde o Editor deixou, sem reposicionar nada.
+                    transform.position = DadosGlobais.posicaoSalvaDaNave;
+                    rb.linearVelocity = Vector2.zero;
+                    DadosGlobais.estaEmOrbita = false;
                 }
             }
             else
@@ -179,9 +192,8 @@ public class Nave : MonoBehaviour
         combustivel = Mathf.Clamp(combustivel, 0f, 100f);
 
         Vector2 forcaGravidadeTotal = Vector2.zero;
-        Planet[] planetas = FindObjectsOfType<Planet>();
 
-        foreach (Planet planeta in planetas)
+        foreach (Planet planeta in planetasCache)
         {
             Vector2 direcaoPlaneta = ((Vector2)planeta.transform.position - rb.position).normalized;
             float distancia = Vector2.Distance(rb.position, planeta.transform.position);

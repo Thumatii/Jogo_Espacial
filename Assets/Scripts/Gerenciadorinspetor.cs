@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
 
+[DefaultExecutionOrder(10000)] // roda depois de tudo, inclusive a Cinemachine — câmera já atualizada nesse ponto
 public class GerenciadorInspetor : MonoBehaviour
 {
     public static GerenciadorInspetor Instancia;
@@ -38,10 +39,23 @@ public class GerenciadorInspetor : MonoBehaviour
     public float distanciaImagensDoCentro = 70f;
     public float escalaAtual = 1.3f;
     public float escalaAdjacente = 0.75f;
+    [Range(0f, 1f)] public float alphaAdjacente = 0.5f; // transparência das laterais (anterior/próxima)
+
+    [Header("Painel de Aparência — Fundo atrás da imagem atual")]
+    public Image fundoImagemAtual;
+    public float paddingFundoAtual = 20f; // quanto o fundo passa da borda da imagem atual, por lado
+    public Color corFundoAtual = new Color(1f, 1f, 1f, 0.2f);
 
     [Header("Efeito de Clique no Preview")]
     public float duracaoEfeitoClique = 0.15f;
     public float escalaPicoEfeitoClique = 1.2f; // multiplica escalaAtual no instante do clique
+
+    [Header("Texto — Borda")]
+    [Range(0f, 1f)] public float larguraBordaTexto = 0.2f;
+    public Color corBordaTexto = Color.black;
+
+    [Header("Efeito de Clique nas Setas")]
+    public float escalaPicoSetas = 1.3f;
 
     private GameObject molduraInstanciada;
     private RectTransform rectMoldura;
@@ -52,6 +66,10 @@ public class GerenciadorInspetor : MonoBehaviour
     private TrocaAparencia trocaAparenciaAtual;
     private Coroutine coroutineTypewriter;
     private Coroutine coroutineEfeitoPreview;
+    private Coroutine coroutineEfeitoSetaEsquerda;
+    private Coroutine coroutineEfeitoSetaDireita;
+    private Vector3 escalaOriginalSetaEsquerda = Vector3.one;
+    private Vector3 escalaOriginalSetaDireita = Vector3.one;
     private bool modoAparenciaAberto = false;
 
     public bool ModoAparenciaAberto => modoAparenciaAberto;
@@ -61,11 +79,19 @@ public class GerenciadorInspetor : MonoBehaviour
 
     void Awake()
     {
+        // Mata qualquer instância anterior (ex: uma que sobreviveu junto de um
+        // objeto DontDestroyOnLoad por engano) antes de assumir como a atual.
+        if (Instancia != null && Instancia != this)
+        {
+            Destroy(Instancia.gameObject);
+        }
+
         Instancia = this;
         cam = Camera.main;
 
         filtroSemRestricao = new ContactFilter2D();
         filtroSemRestricao.NoFilter();
+        filtroSemRestricao.useTriggers = true; // Herbert e Painel de Controle usam Is Trigger — sem isso a detecção falha/fica inconsistente
 
         if (canvasRect != null)
             canvasPrincipal = canvasRect.GetComponentInParent<Canvas>();
@@ -77,11 +103,83 @@ public class GerenciadorInspetor : MonoBehaviour
             molduraInstanciada.SetActive(false);
         }
 
+        // Se não arrastou nada nesses campos, cria sozinho — não precisa
+        // montar Image na mão no Canvas pra isso funcionar.
+        if (canvasRect != null)
+        {
+            if (imagemAtual == null) imagemAtual = CriarImagemPreview("ImagemAtual_Auto");
+            if (imagemAnterior == null) imagemAnterior = CriarImagemPreview("ImagemAnterior_Auto");
+            if (imagemProxima == null) imagemProxima = CriarImagemPreview("ImagemProxima_Auto");
+
+            if (fundoImagemAtual == null)
+            {
+                fundoImagemAtual = CriarImagemPreview("FundoImagemAtual_Auto");
+                fundoImagemAtual.preserveAspect = false;
+                fundoImagemAtual.color = corFundoAtual;
+            }
+        }
+
+        // Garante que o fundo renderiza ATRÁS da imagem atual, não em cima.
+        if (fundoImagemAtual != null && imagemAtual != null)
+            fundoImagemAtual.transform.SetSiblingIndex(imagemAtual.transform.GetSiblingIndex());
+
+        // Guarda a escala ORIGINAL de cada seta (a que você configurou no Editor),
+        // em vez de assumir 1,1,1 — era isso que causava o esticamento gigante.
+        if (botaoSetaEsquerda != null)
+            escalaOriginalSetaEsquerda = botaoSetaEsquerda.GetComponent<RectTransform>().localScale;
+        if (botaoSetaDireita != null)
+            escalaOriginalSetaDireita = botaoSetaDireita.GetComponent<RectTransform>().localScale;
+
         if (textoTooltip != null) textoTooltip.gameObject.SetActive(false);
+        AplicarBordaTexto(textoTooltip);
+        AplicarBordaTexto(textoAparencia);
         EsconderPainelAparencia();
+
+        // Nada disso deve BLOQUEAR clique do mundo — só os botões de seta
+        // precisam receber clique. Image/TMP têm Raycast Target ligado por
+        // padrão, e isso tava impedindo o clique de "passar" pro Herbert
+        // quando essas peças ficavam em cima dele.
+        DesligarRaycast(textoTooltip);
+        DesligarRaycast(textoAparencia);
+        DesligarRaycast(imagemAtual);
+        DesligarRaycast(imagemAnterior);
+        DesligarRaycast(imagemProxima);
+        DesligarRaycast(fundoImagemAtual);
+        if (molduraInstanciada != null)
+        {
+            foreach (Graphic g in molduraInstanciada.GetComponentsInChildren<Graphic>(true))
+                g.raycastTarget = false;
+        }
     }
 
-    void Update()
+    void DesligarRaycast(Graphic g)
+    {
+        if (g != null) g.raycastTarget = false;
+    }
+
+    void AplicarBordaTexto(TextMeshProUGUI texto)
+    {
+        if (texto == null) return;
+        texto.outlineWidth = larguraBordaTexto;
+        texto.outlineColor = corBordaTexto;
+    }
+
+    Image CriarImagemPreview(string nome)
+    {
+        GameObject go = new GameObject(nome, typeof(RectTransform), typeof(Image));
+        go.transform.SetParent(canvasRect, false);
+
+        Image img = go.GetComponent<Image>();
+        img.preserveAspect = true;
+
+        RectTransform rt = go.GetComponent<RectTransform>();
+        rt.sizeDelta = new Vector2(100f, 100f); // tamanho base — escalaAtual/escalaAdjacente ajustam o resto
+
+        go.SetActive(false);
+        return img;
+    }
+
+    void LateUpdate()
     {
         if (cam == null) cam = Camera.main;
         if (cam == null) return;
@@ -108,7 +206,8 @@ public class GerenciadorInspetor : MonoBehaviour
         bool consoleAberto = DebugConsole.Instancia != null && DebugConsole.Instancia.ConsoleEstaAberto;
         if (consoleAberto) return;
 
-        if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+        bool sobreUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+        if (sobreUI) return;
 
         if (!alvoAtual.jaFoiInspecionado)
         {
@@ -214,12 +313,14 @@ public class GerenciadorInspetor : MonoBehaviour
         {
             trocaAparenciaAtual.AparenciaAnterior();
             EfeitoCliquePreview();
+            EfeitoCliqueSetaEsquerda();
         });
 
         botaoSetaDireita.onClick.AddListener(() =>
         {
             trocaAparenciaAtual.ProximaAparencia();
             EfeitoCliquePreview();
+            EfeitoCliqueSetaDireita();
         });
     }
 
@@ -231,6 +332,7 @@ public class GerenciadorInspetor : MonoBehaviour
         if (imagemAtual != null) imagemAtual.gameObject.SetActive(false);
         if (imagemAnterior != null) imagemAnterior.gameObject.SetActive(false);
         if (imagemProxima != null) imagemProxima.gameObject.SetActive(false);
+        if (fundoImagemAtual != null) fundoImagemAtual.gameObject.SetActive(false);
     }
 
     void AtualizarPosicaoEVisual()
@@ -286,6 +388,7 @@ public class GerenciadorInspetor : MonoBehaviour
         if (imagemAtual != null) imagemAtual.gameObject.SetActive(mostrar);
         if (imagemAnterior != null) imagemAnterior.gameObject.SetActive(mostrar);
         if (imagemProxima != null) imagemProxima.gameObject.SetActive(mostrar);
+        if (fundoImagemAtual != null) fundoImagemAtual.gameObject.SetActive(mostrar);
 
         if (!mostrar) return;
 
@@ -310,11 +413,27 @@ public class GerenciadorInspetor : MonoBehaviour
                 imagemAtual.rectTransform.localScale = new Vector3(escalaAtual, escalaAtual, 1f);
         }
 
+        if (fundoImagemAtual != null)
+        {
+            fundoImagemAtual.rectTransform.localPosition = centroPainel;
+            fundoImagemAtual.color = corFundoAtual;
+
+            if (imagemAtual != null)
+            {
+                Vector2 tamanhoBase = imagemAtual.rectTransform.sizeDelta;
+                fundoImagemAtual.rectTransform.sizeDelta = tamanhoBase + new Vector2(paddingFundoAtual, paddingFundoAtual) * 2f;
+            }
+        }
+
         if (imagemAnterior != null)
         {
             imagemAnterior.sprite = trocaAparenciaAtual.SpriteAnterior;
             imagemAnterior.rectTransform.localPosition = centroPainel + new Vector2(-distanciaImagensDoCentro, 0f);
             imagemAnterior.rectTransform.localScale = new Vector3(escalaAdjacente, escalaAdjacente, 1f);
+
+            Color corAnterior = imagemAnterior.color;
+            corAnterior.a = alphaAdjacente;
+            imagemAnterior.color = corAnterior;
         }
 
         if (imagemProxima != null)
@@ -322,6 +441,10 @@ public class GerenciadorInspetor : MonoBehaviour
             imagemProxima.sprite = trocaAparenciaAtual.SpriteProximo;
             imagemProxima.rectTransform.localPosition = centroPainel + new Vector2(distanciaImagensDoCentro, 0f);
             imagemProxima.rectTransform.localScale = new Vector3(escalaAdjacente, escalaAdjacente, 1f);
+
+            Color corProxima = imagemProxima.color;
+            corProxima.a = alphaAdjacente;
+            imagemProxima.color = corProxima;
         }
 
         if (botaoSetaEsquerda != null)
@@ -356,6 +479,39 @@ public class GerenciadorInspetor : MonoBehaviour
 
         rt.localScale = new Vector3(escalaAtual, escalaAtual, 1f);
         coroutineEfeitoPreview = null;
+    }
+
+    void EfeitoCliqueSetaEsquerda()
+    {
+        if (botaoSetaEsquerda == null) return;
+
+        if (coroutineEfeitoSetaEsquerda != null) StopCoroutine(coroutineEfeitoSetaEsquerda);
+        coroutineEfeitoSetaEsquerda = StartCoroutine(EfeitoPopSetaCoroutine(botaoSetaEsquerda.GetComponent<RectTransform>(), escalaOriginalSetaEsquerda, r => coroutineEfeitoSetaEsquerda = r));
+    }
+
+    void EfeitoCliqueSetaDireita()
+    {
+        if (botaoSetaDireita == null) return;
+
+        if (coroutineEfeitoSetaDireita != null) StopCoroutine(coroutineEfeitoSetaDireita);
+        coroutineEfeitoSetaDireita = StartCoroutine(EfeitoPopSetaCoroutine(botaoSetaDireita.GetComponent<RectTransform>(), escalaOriginalSetaDireita, r => coroutineEfeitoSetaDireita = r));
+    }
+
+    IEnumerator EfeitoPopSetaCoroutine(RectTransform alvo, Vector3 escalaBase, System.Action<Coroutine> aoTerminar)
+    {
+        Vector3 escalaPico = escalaBase * escalaPicoSetas;
+        float t = 0f;
+
+        while (t < duracaoEfeitoClique)
+        {
+            t += Time.deltaTime;
+            float progresso = Mathf.Clamp01(t / duracaoEfeitoClique);
+            alvo.localScale = Vector3.Lerp(escalaPico, escalaBase, progresso);
+            yield return null;
+        }
+
+        alvo.localScale = escalaBase;
+        aoTerminar(null);
     }
 
     void AtualizarTexto()

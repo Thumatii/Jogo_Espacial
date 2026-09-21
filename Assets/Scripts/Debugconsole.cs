@@ -21,6 +21,11 @@ public class DebugConsole : MonoBehaviour
 
     private float timeScaleAnterior = 1f;
 
+    // Histórico de comandos digitados (setas cima/baixo pra navegar, tipo terminal/chat do Minecraft)
+    private List<string> historicoDeComandos = new List<string>();
+    private int indiceHistorico = -1; // -1 = não navegando
+    private string rascunhoAtual = "";
+
     private Dictionary<string, Action<string[]>> comandos = new Dictionary<string, Action<string[]>>();
 
     void Awake()
@@ -57,8 +62,6 @@ public class DebugConsole : MonoBehaviour
     }
 
     // ===== REGISTRO DE COMANDOS =====
-    // Use isso de qualquer outro script pra adicionar novos comandos:
-    // DebugConsole.Instancia.RegistrarComando("nome", args => { ... });
 
     public void RegistrarComando(string nome, Action<string[]> acao)
     {
@@ -76,6 +79,8 @@ public class DebugConsole : MonoBehaviour
         RegistrarComando("spawn_center_of_world", args => ComandoSpawnCenterOfWorld());
 
         RegistrarComando("wipe_inspector", args => ComandoWipeInspector());
+
+        RegistrarComando("reset_time", args => ComandoResetTime());
     }
 
     void MostrarAjuda()
@@ -83,10 +88,17 @@ public class DebugConsole : MonoBehaviour
         Log("Comandos disponíveis: " + string.Join(", ", comandos.Keys.OrderBy(k => k)));
     }
 
-    void ExecutarComando(string linha)
+    // ===== EXECUÇÃO (com histórico e autocompletar por prefixo) =====
+
+    void ExecutarComando(string linhaOriginal)
     {
-        linha = linha.Trim();
+        string linha = linhaOriginal.Trim();
         if (string.IsNullOrEmpty(linha)) return;
+
+        // Guarda no histórico de navegação (setas cima/baixo)
+        historicoDeComandos.Add(linha);
+        indiceHistorico = -1;
+        rascunhoAtual = "";
 
         if (linha.StartsWith("/"))
             linha = linha.Substring(1);
@@ -99,19 +111,67 @@ public class DebugConsole : MonoBehaviour
 
         if (comandos.TryGetValue(nomeComando, out Action<string[]> acao))
         {
-            try
-            {
-                acao.Invoke(args);
-            }
-            catch (Exception e)
-            {
-                Log($"Erro ao executar '{nomeComando}': {e.Message}");
-            }
+            ExecutarComSeguranca(nomeComando, acao, args);
+            return;
+        }
+
+        // Não achou nome exato — tenta por prefixo único (ex: "wipe_insp" -> "wipe_inspector")
+        List<string> candidatos = comandos.Keys.Where(k => k.StartsWith(nomeComando)).ToList();
+
+        if (candidatos.Count == 1)
+        {
+            string nomeReal = candidatos[0];
+            ExecutarComSeguranca(nomeReal, comandos[nomeReal], args);
+        }
+        else if (candidatos.Count > 1)
+        {
+            Log($"'{nomeComando}' é ambíguo, pode ser: {string.Join(", ", candidatos)}");
         }
         else
         {
             Log($"Comando desconhecido: '{nomeComando}'. Digite 'help' para ver a lista.");
         }
+    }
+
+    void ExecutarComSeguranca(string nome, Action<string[]> acao, string[] args)
+    {
+        try
+        {
+            acao.Invoke(args);
+        }
+        catch (Exception e)
+        {
+            Log($"Erro ao executar '{nome}': {e.Message}");
+        }
+    }
+
+    // Navega o histórico: direcao -1 = mais antigo (seta cima), +1 = mais novo (seta baixo)
+    void NavegarHistorico(int direcao)
+    {
+        if (historicoDeComandos.Count == 0) return;
+
+        if (indiceHistorico == -1)
+        {
+            if (direcao > 0) return; // já tá no mais novo, seta baixo não faz nada
+            rascunhoAtual = inputAtual;
+            indiceHistorico = historicoDeComandos.Count - 1;
+            inputAtual = historicoDeComandos[indiceHistorico];
+            return;
+        }
+
+        int novoIndice = indiceHistorico + direcao;
+
+        if (novoIndice < 0) novoIndice = 0;
+
+        if (novoIndice >= historicoDeComandos.Count)
+        {
+            indiceHistorico = -1;
+            inputAtual = rascunhoAtual; // volta pro que você tava digitando antes de navegar
+            return;
+        }
+
+        indiceHistorico = novoIndice;
+        inputAtual = historicoDeComandos[indiceHistorico];
     }
 
     void Log(string mensagem)
@@ -131,7 +191,6 @@ public class DebugConsole : MonoBehaviour
             return;
         }
 
-        // Se for a nave (cena Space), usa o reset dela (zera velocidade, órbita, etc.)
         Nave nave = jogador.GetComponent<Nave>();
         if (nave != null)
         {
@@ -140,7 +199,6 @@ public class DebugConsole : MonoBehaviour
             return;
         }
 
-        // Caso contrário (interior da nave / planeta), reposiciona direto
         Rigidbody2D rb = jogador.GetComponent<Rigidbody2D>();
         if (rb != null) rb.linearVelocity = Vector2.zero;
         jogador.transform.position = Vector3.zero;
@@ -155,6 +213,19 @@ public class DebugConsole : MonoBehaviour
             i.ResetInspecao();
         }
         Log($"{inspetores.Length} objeto(s) inspecionável(eis) resetado(s).");
+    }
+
+    void ComandoResetTime()
+    {
+        if (GerenciadorTempo.Instancia != null)
+        {
+            GerenciadorTempo.Instancia.ResetarTempo();
+            Log("Tempo resetado: Ano 1, Dia 1, 0h.");
+        }
+        else
+        {
+            Log("GerenciadorTempo não encontrado (confere se o objeto existe na cena de boot).");
+        }
     }
 
     // ===== UI (IMGUI — funciona em qualquer cena, sem precisar de Canvas) =====
@@ -174,6 +245,22 @@ public class DebugConsole : MonoBehaviour
             GUILayout.Label(linha);
         GUILayout.EndScrollView();
 
+        // Intercepta seta cima/baixo ANTES do TextField desenhar, senão ele consome o evento primeiro.
+        bool campoFocado = GUI.GetNameOfFocusedControl() == "DebugInput";
+        if (campoFocado && Event.current.type == EventType.KeyDown)
+        {
+            if (Event.current.keyCode == KeyCode.UpArrow)
+            {
+                NavegarHistorico(-1);
+                Event.current.Use();
+            }
+            else if (Event.current.keyCode == KeyCode.DownArrow)
+            {
+                NavegarHistorico(1);
+                Event.current.Use();
+            }
+        }
+
         GUILayout.BeginHorizontal();
 
         GUI.SetNextControlName("DebugInput");
@@ -181,7 +268,7 @@ public class DebugConsole : MonoBehaviour
 
         bool enterPressionado = Event.current.type == EventType.KeyDown &&
                                  (Event.current.keyCode == KeyCode.Return || Event.current.keyCode == KeyCode.KeypadEnter) &&
-                                 GUI.GetNameOfFocusedControl() == "DebugInput";
+                                 campoFocado;
 
         if (GUILayout.Button("Enviar", GUILayout.Width(70)) || enterPressionado)
         {
