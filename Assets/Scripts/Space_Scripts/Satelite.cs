@@ -2,14 +2,20 @@ using UnityEngine;
 
 public class Satellite : MonoBehaviour
 {
+    [Header("Identidade (pro painel de status)")]
+    public string nomeSatelite = "Sonda-01";
+    public string tipoSatelite = "Scanner Básico";
+
     [Header("Configurações")]
     public Planet planetaAlvo;
-    public float tempoDeVida = 60f; 
-    public float velocidadeOrbita = 30f; 
+    public float tempoDeVida = 60f;
+    public float velocidadeOrbita = 12f; // mais devagar que antes (era 30)
     public float distanciaExtra = 3f;
 
     private float anguloAtual;
-    private float tempoRestante;
+    private float progresso = 0f; // 0 a 1 — lido pela barra de progresso no GameController
+
+    public float Progresso => progresso;
 
     void Start()
     {
@@ -46,8 +52,6 @@ public class Satellite : MonoBehaviour
         {
             anguloAtual = Random.Range(0f, 360f);
         }
-
-        tempoRestante = tempoDeVida;
     }
 
     void Update()
@@ -58,17 +62,18 @@ public class Satellite : MonoBehaviour
             return;
         }
 
-        tempoRestante -= Time.deltaTime;
-        if (tempoRestante <= 0f)
+        progresso += Time.deltaTime / tempoDeVida;
+
+        if (progresso >= 1f)
         {
-            planetaAlvo.explorado = true; // Marca como explorado quando expira
+            planetaAlvo.explorado = true; // Marca como explorado quando o scan termina
             Destroy(gameObject);
             return;
         }
 
         anguloAtual += velocidadeOrbita * Time.deltaTime;
-        Vector2 pos = (Vector2)planetaAlvo.transform.position + 
-                     new Vector2(Mathf.Cos(anguloAtual * Mathf.Deg2Rad), Mathf.Sin(anguloAtual * Mathf.Deg2Rad)) * 
+        Vector2 pos = (Vector2)planetaAlvo.transform.position +
+                     new Vector2(Mathf.Cos(anguloAtual * Mathf.Deg2Rad), Mathf.Sin(anguloAtual * Mathf.Deg2Rad)) *
                      (planetaAlvo.raio + distanciaExtra);
         transform.position = pos;
     }

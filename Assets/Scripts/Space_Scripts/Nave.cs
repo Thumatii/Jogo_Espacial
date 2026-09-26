@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -23,7 +24,22 @@ public class Nave : MonoBehaviour
 
     [Header("Órbita")]
     public float distanciaOrbita = 5f;
-    public float velocidadeOrbita = 20f;
+    public float velocidadeOrbita = 8f; // mais devagar que antes (era 20)
+
+    [Header("Órbita — Altitude Ajustável e Risco")]
+    public float distanciaOrbitaMinima = 2f;
+    public float distanciaOrbitaMaxima = 10f;
+    public float velocidadeAjusteAltitude = 3f; // W aproxima, S afasta
+    public float consumoCombustivelOrbitaBase = 0.5f; // por segundo, na altitude mais segura
+    public float multiplicadorRiscoCombustivel = 3f; // extra de consumo na altitude mínima
+    public float chancePerigoPorSegundoNoMinimo = 0.05f;
+    public float danoPerigoOrbital = 5f;
+
+    [Header("Órbita — Detritos Visuais (no impacto do perigo)")]
+    public int quantidadeDetritosPorPerigo = 4;
+    public float duracaoDetritos = 1.5f;
+    public float velocidadeDetritos = 3f;
+    public Color corDetritos = new Color(0.45f, 0.4f, 0.35f);
 
     public float velocidadeAtual = 0f;
     private Rigidbody2D rb;
@@ -33,6 +49,15 @@ public class Nave : MonoBehaviour
     private bool emOrbita = false;
     private Planet planetaOrbitando;
     private float anguloOrbita = 0f;
+
+    public bool EstaEmOrbita => emOrbita;
+
+    // Rastreia o anel visual (OrbitaVisual) da órbita atual, pra redesenhar
+    // sempre que a altitude mudar — antes ele só era desenhado UMA VEZ ao
+    // entrar, então altitude ajustável fazia a nave "sair" visualmente do
+    // anel mesmo estando numa órbita válida.
+    private OrbitaVisual orbitaVisualAtual;
+    private float ultimaDistanciaDesenhada = -1f;
 
     private bool emTransicao = false;
     private Vector3 posicaoInicial;
@@ -78,6 +103,8 @@ public class Nave : MonoBehaviour
 
                     OrbitaVisual orbitaVisual = planetaOrbitando.GetComponentInChildren<OrbitaVisual>();
                     if (orbitaVisual != null) orbitaVisual.Ativar(distanciaOrbita);
+                    orbitaVisualAtual = orbitaVisual;
+                    ultimaDistanciaDesenhada = distanciaOrbita;
                 }
                 else
                 {
@@ -136,6 +163,22 @@ public class Nave : MonoBehaviour
                 }
                 return;
             }
+
+            // Altitude ajustável: W aproxima (mais arriscado, gasta mais), S afasta (mais seguro)
+            if (Input.GetKey(KeyCode.W))
+                distanciaOrbita = Mathf.Clamp(distanciaOrbita - velocidadeAjusteAltitude * Time.deltaTime, distanciaOrbitaMinima, distanciaOrbitaMaxima);
+            else if (Input.GetKey(KeyCode.S))
+                distanciaOrbita = Mathf.Clamp(distanciaOrbita + velocidadeAjusteAltitude * Time.deltaTime, distanciaOrbitaMinima, distanciaOrbitaMaxima);
+
+            // Redesenha o anel SÓ quando a distância muda de verdade — não todo
+            // frame à toa (Ativar() recalcula todos os pontos do anel).
+            if (orbitaVisualAtual != null && !Mathf.Approximately(distanciaOrbita, ultimaDistanciaDesenhada))
+            {
+                orbitaVisualAtual.Ativar(distanciaOrbita);
+                ultimaDistanciaDesenhada = distanciaOrbita;
+            }
+
+            AtualizarRiscoOrbital();
 
             anguloOrbita += velocidadeOrbita * Time.deltaTime;
             Vector2 pos = (Vector2)planetaOrbitando.transform.position + new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * (planetaOrbitando.raio + distanciaOrbita);
@@ -209,6 +252,59 @@ public class Nave : MonoBehaviour
         rb.linearVelocity = velocidadeFrente + forcaGravidadeTotal;
     }
 
+    // Quanto mais perto do mínimo, mais arriscado: gasta mais combustível e
+    // tem chance de sofrer dano (detritos/radiação). Na altitude máxima, risco = 0.
+    void AtualizarRiscoOrbital()
+    {
+        float proporcaoRisco = 1f - Mathf.InverseLerp(distanciaOrbitaMinima, distanciaOrbitaMaxima, distanciaOrbita);
+
+        combustivel -= consumoCombustivelOrbitaBase * (1f + proporcaoRisco * multiplicadorRiscoCombustivel) * Time.deltaTime;
+        combustivel = Mathf.Clamp(combustivel, 0f, 100f);
+
+        if (proporcaoRisco > 0f && Random.value < chancePerigoPorSegundoNoMinimo * proporcaoRisco * Time.deltaTime)
+        {
+            vida -= danoPerigoOrbital;
+            vida = Mathf.Clamp(vida, 0f, 100f);
+            NotificacaoUI.Instancia?.Mostrar($"Detritos atingiram a nave! -{danoPerigoOrbital} vida");
+            SpawnarDetritos();
+        }
+    }
+
+    // Uns quadradinhos coloridos que saem voando da nave e somem — feedback
+    // visual simples do impacto, sem precisar de sprite/partícula pronta.
+    void SpawnarDetritos()
+    {
+        for (int i = 0; i < quantidadeDetritosPorPerigo; i++)
+        {
+            GameObject detrito = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            Destroy(detrito.GetComponent<Collider>());
+
+            detrito.transform.position = transform.position;
+            detrito.transform.localScale = Vector3.one * Random.Range(0.1f, 0.25f);
+
+            Renderer renderer = detrito.GetComponent<Renderer>();
+            renderer.material = new Material(Shader.Find("Sprites/Default"));
+            renderer.material.color = corDetritos;
+            renderer.sortingOrder = 5;
+
+            Vector2 direcao = Random.insideUnitCircle.normalized;
+            StartCoroutine(MoverDetrito(detrito, direcao * velocidadeDetritos));
+        }
+    }
+
+    IEnumerator MoverDetrito(GameObject detrito, Vector2 velocidade)
+    {
+        float tempo = 0f;
+        while (tempo < duracaoDetritos && detrito != null)
+        {
+            detrito.transform.position += (Vector3)(velocidade * Time.deltaTime);
+            tempo += Time.deltaTime;
+            yield return null;
+        }
+
+        if (detrito != null) Destroy(detrito);
+    }
+
     private void SalvarEstadoDaNave()
     {
         DadosGlobais.posicaoSalvaDaNave = transform.position;
@@ -248,6 +344,8 @@ public class Nave : MonoBehaviour
 
         OrbitaVisual orbitaVisual = planeta.GetComponentInChildren<OrbitaVisual>();
         if (orbitaVisual != null) orbitaVisual.Ativar(distanciaOrbita);
+        orbitaVisualAtual = orbitaVisual;
+        ultimaDistanciaDesenhada = distanciaOrbita;
     }
 
     public void SairDaOrbita()
