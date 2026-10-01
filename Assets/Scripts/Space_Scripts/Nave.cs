@@ -29,7 +29,7 @@ public class Nave : MonoBehaviour
     [Header("Órbita — Altitude Ajustável e Risco")]
     public float distanciaOrbitaMinima = 2f;
     public float distanciaOrbitaMaxima = 10f;
-    public float velocidadeAjusteAltitude = 3f; // W aproxima, S afasta
+    public float velocidadeAjusteAltitude = 1f; // W aproxima, S afasta (mais devagar que antes, era 3)
     public float consumoCombustivelOrbitaBase = 0.5f; // por segundo, na altitude mais segura
     public float multiplicadorRiscoCombustivel = 3f; // extra de consumo na altitude mínima
     public float chancePerigoPorSegundoNoMinimo = 0.05f;
@@ -140,6 +140,7 @@ public class Nave : MonoBehaviour
         if (!consoleAberto && Input.GetKeyDown(KeyCode.E))
         {
             SalvarEstadoDaNave();
+            Time.timeScale = 1f; // nunca troca de cena com o jogo pausado
             SceneManager.LoadScene("InteriorNave");
         }
 
@@ -260,14 +261,16 @@ public class Nave : MonoBehaviour
 
         combustivel -= consumoCombustivelOrbitaBase * (1f + proporcaoRisco * multiplicadorRiscoCombustivel) * Time.deltaTime;
         combustivel = Mathf.Clamp(combustivel, 0f, 100f);
+    }
 
-        if (proporcaoRisco > 0f && Random.value < chancePerigoPorSegundoNoMinimo * proporcaoRisco * Time.deltaTime)
-        {
-            vida -= danoPerigoOrbital;
-            vida = Mathf.Clamp(vida, 0f, 100f);
-            NotificacaoUI.Instancia?.Mostrar($"Detritos atingiram a nave! -{danoPerigoOrbital} vida");
-            SpawnarDetritos();
-        }
+    // Chamado pelo DetritoEspacial quando a nave colide com um detrito de verdade —
+    // substitui o dano por chance invisível de antes, agora tem causa visível.
+    public void ReceberDano(float quantidade)
+    {
+        vida -= quantidade;
+        vida = Mathf.Clamp(vida, 0f, 100f);
+        NotificacaoUI.Instancia?.Mostrar($"Colisão com detrito espacial! -{quantidade:F0} vida");
+        SpawnarDetritos(); // reaproveita o efeito visual de impacto (faíscas)
     }
 
     // Uns quadradinhos coloridos que saem voando da nave e somem — feedback
@@ -327,6 +330,10 @@ public class Nave : MonoBehaviour
     {
         planetaOrbitando = planeta;
         anguloSpriteAtual = 0f;
+
+        // Sempre começa numa distância padrão — antes carregava o valor que
+        // tinha ficado de uma órbita anterior (podia começar já no máximo).
+        distanciaOrbita = Mathf.Clamp(5f, distanciaOrbitaMinima, distanciaOrbitaMaxima);
 
         Vector2 dir = ((Vector2)transform.position - (Vector2)planeta.transform.position).normalized;
         anguloOrbita = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg;

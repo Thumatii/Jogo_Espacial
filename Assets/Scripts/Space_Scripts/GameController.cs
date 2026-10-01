@@ -4,50 +4,42 @@ using UnityEngine.SceneManagement;
 
 public class GameController : MonoBehaviour
 {
-    public enum Estado { Mapa, Decisao, MinigamePouso, ExplorandoPlaneta, EmOrbita }
+    public enum Estado { Mapa, EmOrbita }
 
     [Header("Referências de Objetos")]
     public Nave nave;
     public Camera cameraPrincipal;
 
-    [Header("UI do Aviso de Órbita (um painel só, pra tudo)")]
+    [Header("Aviso de Proximidade (só 'Pressione O', só fora da órbita)")]
     public TextMeshProUGUI textoOrbita;
     public GameObject painelTextoOrbita;
     public float raioOrbita = 5f;
 
-    [Header("Satélite e Tabela")]
+    [Header("Satélite")]
     public GameObject satellitePrefab;
     public GameObject painelTabela;
     public TextMeshProUGUI textoInfoPlanetas;
+    public TMP_InputField inputNomeSatelite; // opcional — mesmo esquema do nome da nave (UIManager)
 
-    [Header("Barra de Progresso do Scan")]
+    [Header("Barra de Progresso do Scan (só aparece com o painel de status aberto)")]
     public GameObject painelProgressoScan;
     public UnityEngine.UI.Slider barraProgressoScan;
 
-    [Header("Painel de Status do Satélite")]
-    public GameObject painelStatusSatelite;
-    public TextMeshProUGUI textoStatusSatelite;
-
-    [Header("UI (Painéis)")]
-    public GameObject painelDecisaoPouso;
-    public GameObject painelPouso;
-    public GameObject painelExploracao;
-
-    [Header("Cenário (Planeta)")]
-    public GameObject espacoCenario;
-    public GameObject planetaInterior;
-    public Camera cameraPlaneta;
+    [Header("Painel de Status (satélite + órbita) — toggle com a tecla I")]
+    public GameObject painelStatus;
+    public TextMeshProUGUI textoStatus;
 
     private Estado estadoAtual = Estado.Mapa;
     private Planet planetaAlvo;
     private float tempoParaReentrarOrbita = 0f;
     private Planet[] planetasCache;
     private Satellite satelliteAtivo;
+    private bool statusAberto = false;
 
     void Start()
     {
         // Planetas não mudam em runtime — busca uma vez só, em vez de escanear
-        // a cena toda em Update() a cada frame (rodava até 2x por frame antes).
+        // a cena toda em Update() a cada frame.
         planetasCache = Object.FindObjectsByType<Planet>(FindObjectsSortMode.None);
 
         if (DadosGlobais.jaEntrouNoEspaco)
@@ -66,7 +58,10 @@ public class GameController : MonoBehaviour
             }
         }
 
-        AlternarPaineisIniciais();
+        if (painelTextoOrbita) painelTextoOrbita.SetActive(false);
+        if (painelStatus) painelStatus.SetActive(false);
+        if (painelProgressoScan) painelProgressoScan.SetActive(false);
+        Time.timeScale = 1;
     }
 
     void Update()
@@ -74,139 +69,81 @@ public class GameController : MonoBehaviour
         if (nave == null) return;
 
         // Enquanto o Debug Console está aberto, ignora todos os atalhos desta tela
-        // (E, O, F, Tab) pra não conflitar com o que está sendo digitado nele.
+        // (O, F, I, Tab) pra não conflitar com o que está sendo digitado nele.
         if (DebugConsole.Instancia != null && DebugConsole.Instancia.ConsoleEstaAberto) return;
-
-        // LOG TEMPORÁRIO — remove depois de achar o problema.
-        if (Input.GetKeyDown(KeyCode.O) || Input.GetKeyDown(KeyCode.F))
-        {
-            string tecla = Input.GetKeyDown(KeyCode.O) ? "O" : "F";
-            float dist = planetaAlvo != null ? Vector2.Distance(nave.transform.position, planetaAlvo.transform.position) : -1f;
-            Debug.Log($"[DIAG] Tecla={tecla} | GameController.estadoAtual={estadoAtual} | Nave.EstaEmOrbita={nave.EstaEmOrbita} | planetaAlvo={(planetaAlvo != null ? planetaAlvo.name : "null")} | distancia={dist:F1} | raioOrbita={raioOrbita} | tempoParaReentrar={tempoParaReentrarOrbita:F1}");
-        }
 
         if (estadoAtual == Estado.Mapa)
         {
-            VerificarProximidadePlanetas();
             VerificarProximidadeOrbita();
-
-            if (Input.GetKeyDown(KeyCode.E))
-            {
-                SalvarEspacoEEntrarNaNave();
-            }
         }
         else if (estadoAtual == Estado.EmOrbita)
         {
             GerenciarOrbita();
         }
 
-        // Roda TODO frame, independente de qual caminho o código passou pra
-        // chegar aqui — decide sozinho o que mostrar a partir do estado atual.
-        // Antes cada método (entrar/sair/aproximar) tentava lembrar de ligar e
-        // desligar o texto certo na hora certa, e bastava esquecer um lugar
-        // pra ficar com aviso travado na tela pra sempre (era exatamente o
-        // "Pressione F" ficando preso depois de sair da órbita).
-        AtualizarUIOrbita();
-        AtualizarBarraProgressoScan();
-        AtualizarStatusSatelite();
+        AtualizarAvisoProximidade();
+        AtualizarPainelStatus();
 
         GerenciarAtalhosGlobais();
     }
 
-    void AtualizarBarraProgressoScan()
-    {
-        if (painelProgressoScan == null) return;
-
-        bool mostrar = satelliteAtivo != null;
-        painelProgressoScan.SetActive(mostrar);
-
-        if (mostrar && barraProgressoScan != null)
-            barraProgressoScan.value = satelliteAtivo.Progresso;
-    }
-
-    void AtualizarStatusSatelite()
-    {
-        if (painelStatusSatelite == null) return;
-
-        bool mostrar = satelliteAtivo != null;
-        painelStatusSatelite.SetActive(mostrar);
-
-        if (mostrar && textoStatusSatelite != null)
-        {
-            string nomePlaneta = satelliteAtivo.planetaAlvo != null ? satelliteAtivo.planetaAlvo.nomePlaneta : "?";
-            int porcentagem = Mathf.RoundToInt(satelliteAtivo.Progresso * 100f);
-
-            textoStatusSatelite.text =
-                $"{satelliteAtivo.nomeSatelite} ({satelliteAtivo.tipoSatelite})\n" +
-                $"Planeta: {nomePlaneta}\n" +
-                $"Coletando dados... {porcentagem}%";
-        }
-    }
-
-    void AtualizarUIOrbita()
+    // Aviso simples de "Pressione O" — só aparece perto do planeta e FORA da
+    // órbita. Não some sozinho baseado em outro estado, é só essa condição.
+    void AtualizarAvisoProximidade()
     {
         if (painelTextoOrbita == null || textoOrbita == null) return;
-
-        if (estadoAtual == Estado.EmOrbita)
-        {
-            painelTextoOrbita.SetActive(true);
-
-            if (planetaAlvo != null && !planetaAlvo.sateliteLancado)
-                textoOrbita.text = "Pressione 'F' para lançar satélite\nPressione 'O' para sair da órbita";
-            else
-                textoOrbita.text = "Pressione 'O' para sair da órbita";
-
-            return;
-        }
 
         bool pertoOSuficiente = estadoAtual == Estado.Mapa
             && tempoParaReentrarOrbita <= 0f
             && planetaAlvo != null
             && Vector2.Distance(nave.transform.position, planetaAlvo.transform.position) < (planetaAlvo.raio + raioOrbita);
 
+        painelTextoOrbita.SetActive(pertoOSuficiente);
+
         if (pertoOSuficiente)
-        {
-            painelTextoOrbita.SetActive(true);
             textoOrbita.text = "Pressione 'O' para entrar em órbita";
+    }
+
+    // Painel único com tudo (satélite + atalhos da órbita) — só aparece
+    // quando o jogador aperta a tecla, nunca sozinho.
+    void AtualizarPainelStatus()
+    {
+        if (painelStatus == null) return;
+
+        painelStatus.SetActive(statusAberto);
+        if (painelProgressoScan != null)
+            painelProgressoScan.SetActive(statusAberto && satelliteAtivo != null);
+
+        if (!statusAberto) return;
+
+        if (satelliteAtivo != null && barraProgressoScan != null)
+            barraProgressoScan.value = satelliteAtivo.Progresso;
+
+        if (textoStatus == null) return;
+
+        string texto = "";
+
+        if (estadoAtual == Estado.EmOrbita)
+        {
+            if (planetaAlvo != null && !planetaAlvo.sateliteLancado)
+                texto += "Pressione 'F' para lançar satélite\n";
+            texto += "Pressione 'O' para sair da órbita\n\n";
+        }
+
+        if (satelliteAtivo != null)
+        {
+            string nomePlaneta = satelliteAtivo.planetaAlvo != null ? satelliteAtivo.planetaAlvo.nomePlaneta : "?";
+            int porcentagem = Mathf.RoundToInt(satelliteAtivo.Progresso * 100f);
+            texto += $"{satelliteAtivo.nomeSatelite} ({satelliteAtivo.tipoSatelite})\n";
+            texto += $"Planeta: {nomePlaneta}\n";
+            texto += $"Coletando dados... {porcentagem}%";
         }
         else
         {
-            painelTextoOrbita.SetActive(false);
+            texto += "Nenhum satélite ativo.";
         }
-    }
 
-    void VerificarProximidadePlanetas()
-    {
-        foreach (Planet p in planetasCache)
-        {
-            float dist = Vector2.Distance(nave.transform.position, p.transform.position);
-            if (dist < p.raio + 0.5f)
-            {
-                planetaAlvo = p;
-                AbrirPainelDecisao();
-                break;
-            }
-        }
-    }
-
-    void SalvarEspacoEEntrarNaNave()
-    {
-        GameObject naveObj = GameObject.FindWithTag("Player");
-        if (naveObj != null)
-        {
-            Rigidbody2D rbNave = naveObj.GetComponent<Rigidbody2D>();
-            if (rbNave != null)
-            {
-                rbNave.linearVelocity = Vector2.zero;
-                rbNave.angularVelocity = 0f;
-            }
-
-            DadosGlobais.posicaoSalvaDaNave = naveObj.transform.position;
-            DadosGlobais.jaEntrouNoEspaco = true;
-            DadosGlobais.SalvarNoDisco();
-
-            SceneManager.LoadScene("InteriorNave");
-        }
+        textoStatus.text = texto;
     }
 
     void GerenciarOrbita()
@@ -225,6 +162,8 @@ public class GameController : MonoBehaviour
             if (satScript != null)
             {
                 satScript.planetaAlvo = planetaAlvo;
+                if (inputNomeSatelite != null && !string.IsNullOrEmpty(inputNomeSatelite.text))
+                    satScript.nomeSatelite = inputNomeSatelite.text;
                 satelliteAtivo = satScript;
             }
         }
@@ -238,91 +177,11 @@ public class GameController : MonoBehaviour
             painelTabela.SetActive(!ativo);
             if (!ativo) AtualizarTabela();
         }
-    }
 
-    void AlternarPaineisIniciais()
-    {
-        if (painelDecisaoPouso) painelDecisaoPouso.SetActive(false);
-        if (painelPouso) painelPouso.SetActive(false);
-        if (painelExploracao) painelExploracao.SetActive(false);
-        if (planetaInterior) planetaInterior.SetActive(false);
-        if (cameraPlaneta) cameraPlaneta.gameObject.SetActive(false);
-        if (painelTextoOrbita) painelTextoOrbita.SetActive(false);
-        Time.timeScale = 1;
-    }
-
-    void AbrirPainelDecisao()
-    {
-        estadoAtual = Estado.Decisao;
-        if (painelDecisaoPouso) painelDecisaoPouso.SetActive(true);
-        Time.timeScale = 0;
-    }
-
-    public void VoltarParaEspaco()
-    {
-        Time.timeScale = 1;
-        if (painelDecisaoPouso) painelDecisaoPouso.SetActive(false);
-        estadoAtual = Estado.Mapa;
-
-        if (planetaAlvo != null && nave != null)
+        if (Input.GetKeyDown(KeyCode.I))
         {
-            Vector2 direcaoParaLonge = ((Vector2)nave.transform.position - (Vector2)planetaAlvo.transform.position).normalized;
-            Vector2 novaPos = (Vector2)nave.transform.position + (direcaoParaLonge * 2.5f);
-            nave.ResetarNave(novaPos);
+            statusAberto = !statusAberto;
         }
-    }
-
-    public void IniciarMinigamePouso()
-    {
-        Time.timeScale = 1;
-        if (painelDecisaoPouso) painelDecisaoPouso.SetActive(false);
-        estadoAtual = Estado.MinigamePouso;
-        if (painelPouso) painelPouso.SetActive(true);
-
-        // Como o SistemaPouso foi removido, adapte aqui caso tenha outro método de pouso, 
-        // ou deixe apenas ativando o painel de pouso visual.
-    }
-
-    public void PousoFalhou()
-    {
-        Time.timeScale = 1;
-        if (painelPouso) painelPouso.SetActive(false);
-
-        Vector2 pos = Random.insideUnitCircle * 12f;
-        nave.ResetarNave(pos);
-        Rigidbody2D rb = nave.GetComponent<Rigidbody2D>();
-        if (rb) rb.linearVelocity = Random.insideUnitCircle * 20f;
-        estadoAtual = Estado.Mapa;
-    }
-
-    public void PousoBemSucedido()
-    {
-        Time.timeScale = 1;
-        if (painelPouso) painelPouso.SetActive(false);
-        EntrarNoPlaneta();
-    }
-
-    void EntrarNoPlaneta()
-    {
-        estadoAtual = Estado.ExplorandoPlaneta;
-        if (espacoCenario) espacoCenario.SetActive(false);
-        if (planetaInterior) planetaInterior.SetActive(true);
-        if (cameraPrincipal) cameraPrincipal.gameObject.SetActive(false);
-        if (cameraPlaneta) cameraPlaneta.gameObject.SetActive(true);
-        if (painelExploracao) painelExploracao.SetActive(true);
-    }
-
-    public void SairDoPlaneta()
-    {
-        if (espacoCenario) espacoCenario.SetActive(true);
-        if (planetaInterior) planetaInterior.SetActive(false);
-        if (cameraPrincipal) cameraPrincipal.gameObject.SetActive(true);
-        if (cameraPlaneta) cameraPlaneta.gameObject.SetActive(false);
-        if (painelExploracao) painelExploracao.SetActive(false);
-
-        Vector2 pos = (Vector2)planetaAlvo.transform.position + new Vector2(6f, 6f);
-        nave.ResetarNave(pos);
-        estadoAtual = Estado.Mapa;
     }
 
     void VerificarProximidadeOrbita()
@@ -348,7 +207,6 @@ public class GameController : MonoBehaviour
     void EntrarEmOrbita()
     {
         estadoAtual = Estado.EmOrbita;
-        if (painelDecisaoPouso) painelDecisaoPouso.SetActive(false);
         nave.IniciarOrbita(planetaAlvo);
     }
 
