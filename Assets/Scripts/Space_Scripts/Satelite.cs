@@ -12,8 +12,14 @@ public class Satellite : MonoBehaviour
     public float velocidadeOrbita = 12f; // mais devagar que antes (era 30)
     public float distanciaExtra = 3f;
 
+    [Header("Anel Visual (igual o da nave, mas só desse satélite)")]
+    public int quantidadePontosAnel = 30;
+    public float tamanhoPontoAnel = 0.15f;
+    public Color corAnel = Color.cyan;
+
     private float anguloAtual;
     private float progresso = 0f; // 0 a 1 — lido pela barra de progresso no GameController
+    private GameObject[] pontosAnel; // os pontinhos que desenham o círculo da órbita
 
     public float Progresso => progresso;
 
@@ -51,6 +57,49 @@ public class Satellite : MonoBehaviour
         else
         {
             anguloAtual = Random.Range(0f, 360f);
+        }
+
+        CriarAnelVisual();
+    }
+
+    // Desenha um círculo de pontinhos no raio da órbita — pertence só a
+    // ESSE satélite (não é o mesmo objeto usado pela nave), então não tem
+    // briga de "quem desenha por cima de quem" se tiver vários satélites.
+    void CriarAnelVisual()
+    {
+        pontosAnel = new GameObject[quantidadePontosAnel];
+        float raioTotal = planetaAlvo.raio + distanciaExtra;
+        Vector3 centro = planetaAlvo.transform.position;
+
+        for (int i = 0; i < quantidadePontosAnel; i++)
+        {
+            GameObject ponto = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            Destroy(ponto.GetComponent<Collider>());
+            ponto.name = "AnelSatelite_" + i;
+            ponto.transform.localScale = Vector3.one * tamanhoPontoAnel;
+
+            Renderer r = ponto.GetComponent<Renderer>();
+            r.material = new Material(Shader.Find("Sprites/Default"));
+            r.material.color = corAnel;
+            r.sortingOrder = -10;
+
+            float angulo = (i / (float)quantidadePontosAnel) * 360f * Mathf.Deg2Rad;
+            float x = centro.x + Mathf.Cos(angulo) * raioTotal;
+            float y = centro.y + Mathf.Sin(angulo) * raioTotal;
+            ponto.transform.position = new Vector3(x, y, 0f);
+
+            pontosAnel[i] = ponto;
+        }
+    }
+
+    // Some JUNTO com o satélite — não antes, não depois. Era a falta
+    // disso que provavelmente fazia o anel desaparecer sozinho sem motivo.
+    void OnDestroy()
+    {
+        if (pontosAnel == null) return;
+        foreach (GameObject p in pontosAnel)
+        {
+            if (p != null) Destroy(p);
         }
     }
 

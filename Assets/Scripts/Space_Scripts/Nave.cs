@@ -51,6 +51,7 @@ public class Nave : MonoBehaviour
     private float anguloOrbita = 0f;
 
     public bool EstaEmOrbita => emOrbita;
+    public Planet PlanetaOrbitando => planetaOrbitando;
 
     // Rastreia o anel visual (OrbitaVisual) da órbita atual, pra redesenhar
     // sempre que a altitude mudar — antes ele só era desenhado UMA VEZ ao
@@ -94,6 +95,7 @@ public class Nave : MonoBehaviour
                         ? DadosGlobais.anguloOrbitaSalvo
                         : DadosGlobais.anguloOrbitaSalvo + (velocidadeOrbita * tempoDecorrido);
 
+                    distanciaOrbita = DadosGlobais.distanciaOrbitaSalva; // altitude de verdade, não o padrão da cena
                     float raioOrbita = planetaOrbitando.raio + distanciaOrbita;
                     Vector2 pos = (Vector2)planetaOrbitando.transform.position +
                         new Vector2(Mathf.Cos(anguloOrbita * Mathf.Deg2Rad), Mathf.Sin(anguloOrbita * Mathf.Deg2Rad)) * raioOrbita;
@@ -321,6 +323,7 @@ public class Nave : MonoBehaviour
         {
             DadosGlobais.nomePlanetaOrbitado = planetaOrbitando.gameObject.name;
             DadosGlobais.anguloOrbitaSalvo = anguloOrbita;
+            DadosGlobais.distanciaOrbitaSalva = distanciaOrbita;
         }
 
         DadosGlobais.SalvarNoDisco();

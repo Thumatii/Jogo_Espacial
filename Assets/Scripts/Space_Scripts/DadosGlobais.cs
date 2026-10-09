@@ -14,6 +14,7 @@ public static class DadosGlobais
     public static bool estaEmOrbita = false;
     public static string nomePlanetaOrbitado = "";
     public static float anguloOrbitaSalvo = 0f;
+    public static float distanciaOrbitaSalva = 5f; // altitude — faltava isso, por isso o "outra órbita"
 
     // Memória da cena Interior
     public static Vector3 posicaoJogadorInterior;
@@ -34,6 +35,7 @@ public static class DadosGlobais
         PlayerPrefs.SetInt("EstaEmOrbita", estaEmOrbita ? 1 : 0);
         PlayerPrefs.SetString("NomePlanetaOrbitado", nomePlanetaOrbitado);
         PlayerPrefs.SetFloat("AnguloOrbita", anguloOrbitaSalvo);
+        PlayerPrefs.SetFloat("DistanciaOrbita", distanciaOrbitaSalva);
 
         // Dados do Jogador (Interior)
         PlayerPrefs.SetFloat("JogadorIntX", posicaoJogadorInterior.x);
@@ -63,6 +65,7 @@ public static class DadosGlobais
         estaEmOrbita = PlayerPrefs.GetInt("EstaEmOrbita") == 1;
         nomePlanetaOrbitado = PlayerPrefs.GetString("NomePlanetaOrbitado", "");
         anguloOrbitaSalvo = PlayerPrefs.GetFloat("AnguloOrbita", 0f);
+        distanciaOrbitaSalva = PlayerPrefs.GetFloat("DistanciaOrbita", 5f);
 
         // Carrega posição do Jogador no Interior
         posicaoJogadorInterior = new Vector3(
